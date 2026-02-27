@@ -232,7 +232,7 @@ systemctl start tinyoraclaw-queue  # start processing
 | [OracLaw](https://github.com/jasperan/oraclaw) | OpenClaw | TypeScript + Python | Code-aware AI with Oracle memory |
 | [PicoOraClaw](https://github.com/jasperan/picooraclaw) | PicoClaw | Go | Lightweight agent with Oracle storage |
 | [ZeroOraClaw](https://github.com/jasperan/zerooraclaw) | ZeroClaw | Rust | High-performance agent with Oracle backend |
-| **TinyOraClaw** | TinyClaw | TypeScript + Python | Multi-agent teams with Oracle persistence |
+| [**TinyOraClaw**](https://github.com/jasperan/tinyoraclaw) | TinyClaw | TypeScript + Python | Multi-agent teams with Oracle persistence |
 
 ## License
 
