@@ -9,6 +9,11 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from .config import TinyoraclawSettings
 from .db.connection import OracleConnectionManager
 from .db.schema import init_schema
+from .services.embedding_service import EmbeddingService
+from .services.memory_service import MemoryService
+from .services.queue_service import QueueService
+from .services.session_service import SessionService
+from .services.transcript_service import TranscriptService
 from .api import api_router
 
 logging.basicConfig(level=logging.INFO)
@@ -39,9 +44,50 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.warning("Auto-init failed (run POST /api/init manually): %s", e)
 
+    # Create queue service
+    if pool:
+        app.state.queue_service = QueueService(pool)
+        logger.info("QueueService initialized")
+    else:
+        app.state.queue_service = None
+        logger.warning("QueueService unavailable (no pool)")
+
+    # Create embedding + memory services
+    embedding_service = None
+    if pool:
+        try:
+            embedding_service = EmbeddingService(settings)
+            await embedding_service.initialize()
+            memory_service = MemoryService(pool, embedding_service, settings)
+            await memory_service.initialize()
+            app.state.embedding_service = embedding_service
+            app.state.memory_service = memory_service
+            logger.info("EmbeddingService + MemoryService initialized")
+        except Exception as e:
+            logger.warning("Memory services unavailable: %s", e)
+            app.state.embedding_service = None
+            app.state.memory_service = None
+    else:
+        app.state.embedding_service = None
+        app.state.memory_service = None
+        logger.warning("Memory services unavailable (no pool)")
+
+    # Create session + transcript services
+    if pool:
+        app.state.session_service = SessionService(pool)
+        app.state.transcript_service = TranscriptService(pool)
+        logger.info("SessionService + TranscriptService initialized")
+    else:
+        app.state.session_service = None
+        app.state.transcript_service = None
+        logger.warning("SessionService + TranscriptService unavailable (no pool)")
+
     yield
 
     # Shutdown
+    if embedding_service:
+        await embedding_service.close()
+        logger.info("EmbeddingService closed")
     if pool:
         await conn_mgr.close_pool()
         logger.info("Oracle connection pool closed")
