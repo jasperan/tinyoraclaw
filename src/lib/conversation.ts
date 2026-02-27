@@ -1,10 +1,21 @@
-import fs from 'fs';
-import path from 'path';
 import { Conversation } from './types';
-import { CHATS_DIR, getSettings, getAgents } from './config';
+import { getSettings, getAgents } from './config';
 import { log, emitEvent } from './logging';
 import { enqueueMessage, enqueueResponse } from './db';
 import { handleLongResponse, collectFiles } from './response';
+
+// ── Sidecar config (for session saving) ─────────────────────────────────────
+
+const SIDECAR_URL = (process.env.TINYORACLAW_SERVICE_URL || 'http://localhost:8100').replace(/\/$/, '');
+const SIDECAR_TOKEN = process.env.TINYORACLAW_SERVICE_TOKEN || '';
+
+function sidecarHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (SIDECAR_TOKEN) {
+        headers['Authorization'] = `Bearer ${SIDECAR_TOKEN}`;
+    }
+    return headers;
+}
 
 // Active conversations — tracks in-flight team message passing
 export const conversations = new Map<string, Conversation>();
@@ -73,17 +84,17 @@ export function decrementPending(conv: Conversation): boolean {
 }
 
 /**
- * Enqueue an internal (agent-to-agent) message into the SQLite queue.
+ * Enqueue an internal (agent-to-agent) message into the Oracle queue via sidecar.
  */
-export function enqueueInternalMessage(
+export async function enqueueInternalMessage(
     conversationId: string,
     fromAgent: string,
     targetAgent: string,
     message: string,
     originalData: { channel: string; sender: string; senderId?: string | null; messageId: string }
-): void {
+): Promise<void> {
     const messageId = `internal_${conversationId}_${targetAgent}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    enqueueMessage({
+    await enqueueMessage({
         channel: originalData.channel,
         sender: originalData.sender,
         senderId: originalData.senderId ?? undefined,
@@ -97,35 +108,10 @@ export function enqueueInternalMessage(
 }
 
 /**
- * Complete a conversation: aggregate responses, write to outgoing queue, save chat history.
+ * Save chat history to Oracle sessions via sidecar (replaces filesystem .md files).
  */
-export function completeConversation(conv: Conversation): void {
-    const settings = getSettings();
-    const agents = getAgents(settings);
-
-    log('INFO', `Conversation ${conv.id} complete — ${conv.responses.length} response(s), ${conv.totalMessages} total message(s)`);
-    emitEvent('team_chain_end', {
-        teamId: conv.teamContext.teamId,
-        totalSteps: conv.responses.length,
-        agents: conv.responses.map(s => s.agentId),
-    });
-
-    // Aggregate responses
-    let finalResponse: string;
-    if (conv.responses.length === 1) {
-        finalResponse = conv.responses[0].response;
-    } else {
-        finalResponse = conv.responses
-            .map(step => `@${step.agentId}: ${step.response}`)
-            .join('\n\n------\n\n');
-    }
-
-    // Save chat history
+async function saveSessionToOracle(conv: Conversation, agents: Record<string, any>): Promise<void> {
     try {
-        const teamChatsDir = path.join(CHATS_DIR, conv.teamContext.teamId);
-        if (!fs.existsSync(teamChatsDir)) {
-            fs.mkdirSync(teamChatsDir, { recursive: true });
-        }
         const chatLines: string[] = [];
         chatLines.push(`# Team Conversation: ${conv.teamContext.team.name} (@${conv.teamContext.teamId})`);
         chatLines.push(`**Date:** ${new Date().toISOString()}`);
@@ -149,13 +135,54 @@ export function completeConversation(conv: Conversation): void {
             chatLines.push(step.response);
             chatLines.push('');
         }
-        const now = new Date();
-        const dateTime = now.toISOString().replace(/[:.]/g, '-').replace('T', '_').replace('Z', '');
-        fs.writeFileSync(path.join(teamChatsDir, `${dateTime}.md`), chatLines.join('\n'));
-        log('INFO', `Chat history saved`);
+
+        const history = chatLines.join('\n');
+
+        await fetch(`${SIDECAR_URL}/api/sessions/save`, {
+            method: 'POST',
+            headers: sidecarHeaders(),
+            body: JSON.stringify({
+                teamId: conv.teamContext.teamId,
+                history,
+                channel: conv.channel,
+                label: `${conv.teamContext.team.name} — ${new Date().toISOString()}`,
+            }),
+        });
+
+        log('INFO', `Chat history saved to Oracle (team: ${conv.teamContext.teamId})`);
     } catch (e) {
-        log('ERROR', `Failed to save chat history: ${(e as Error).message}`);
+        log('ERROR', `Failed to save chat history to Oracle: ${(e as Error).message}`);
     }
+}
+
+/**
+ * Complete a conversation: aggregate responses, write to outgoing queue, save chat history.
+ */
+export async function completeConversation(conv: Conversation): Promise<void> {
+    const settings = getSettings();
+    const agents = getAgents(settings);
+
+    log('INFO', `Conversation ${conv.id} complete — ${conv.responses.length} response(s), ${conv.totalMessages} total message(s)`);
+    emitEvent('team_chain_end', {
+        teamId: conv.teamContext.teamId,
+        totalSteps: conv.responses.length,
+        agents: conv.responses.map(s => s.agentId),
+    });
+
+    // Aggregate responses
+    let finalResponse: string;
+    if (conv.responses.length === 1) {
+        finalResponse = conv.responses[0].response;
+    } else {
+        finalResponse = conv.responses
+            .map(step => `@${step.agentId}: ${step.response}`)
+            .join('\n\n------\n\n');
+    }
+
+    // Save chat history to Oracle (non-blocking — don't fail the conversation)
+    saveSessionToOracle(conv, agents).catch(e => {
+        log('ERROR', `Background session save failed: ${(e as Error).message}`);
+    });
 
     // Detect file references
     finalResponse = finalResponse.trim();
@@ -175,7 +202,7 @@ export function completeConversation(conv: Conversation): void {
     const { message: responseMessage, files: allFiles } = handleLongResponse(finalResponse, outboundFiles);
 
     // Write to outgoing queue
-    enqueueResponse({
+    await enqueueResponse({
         channel: conv.channel,
         sender: conv.sender,
         message: responseMessage,

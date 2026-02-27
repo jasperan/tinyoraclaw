@@ -12,6 +12,8 @@
  *   - Agent mentions ([@teammate: message]) become new messages in the queue
  *   - Each agent processes messages naturally via its own promise chain
  *   - Conversations complete when all branches resolve (no more pending mentions)
+ *
+ * TinyOraClaw: All storage backed by Oracle AI Database via sidecar HTTP API.
  */
 
 import fs from 'fs';
@@ -184,7 +186,7 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
             // Handle long responses — send as file attachment
             const { message: responseMessage, files: allFiles } = handleLongResponse(finalResponse, outboundFiles);
 
-            enqueueResponse({
+            await enqueueResponse({
                 channel,
                 sender,
                 senderId: dbMsg.sender_id ?? undefined,
@@ -198,7 +200,7 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
             log('INFO', `✓ Response ready [${channel}] ${sender} via agent:${agentId} (${finalResponse.length} chars)`);
             emitEvent('response_ready', { channel, sender, agentId, responseLength: finalResponse.length, responseText: finalResponse, messageId });
 
-            dbCompleteMessage(dbMsg.id);
+            await dbCompleteMessage(dbMsg.id);
             return;
         }
 
@@ -250,7 +252,7 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
                 emitEvent('chain_handoff', { teamId: conv.teamContext.teamId, fromAgent: agentId, toAgent: mention.teammateId });
 
                 const internalMsg = `[Message from teammate @${agentId}]:\n${mention.message}`;
-                enqueueInternalMessage(conv.id, agentId, mention.teammateId, internalMsg, {
+                await enqueueInternalMessage(conv.id, agentId, mention.teammateId, internalMsg, {
                     channel: messageData.channel,
                     sender: messageData.sender,
                     senderId: messageData.senderId,
@@ -266,18 +268,18 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
             const shouldComplete = decrementPending(conv);
 
             if (shouldComplete) {
-                completeConversation(conv);
+                await completeConversation(conv);
             } else {
                 log('INFO', `Conversation ${conv.id}: ${conv.pending} branch(es) still pending`);
             }
         });
 
         // Mark message as completed in DB
-        dbCompleteMessage(dbMsg.id);
+        await dbCompleteMessage(dbMsg.id);
 
     } catch (error) {
         log('ERROR', `Processing error: ${(error as Error).message}`);
-        failMessage(dbMsg.id, (error as Error).message);
+        await failMessage(dbMsg.id, (error as Error).message);
     }
 }
 
@@ -288,13 +290,13 @@ const agentProcessingChains = new Map<string, Promise<void>>();
 async function processQueue(): Promise<void> {
     try {
         // Get all agents with pending messages
-        const pendingAgents = getPendingAgents();
+        const pendingAgents = await getPendingAgents();
 
         if (pendingAgents.length === 0) return;
 
         for (const agentId of pendingAgents) {
             // Claim next message for this agent
-            const dbMsg = claimNextMessage(agentId);
+            const dbMsg = await claimNextMessage(agentId);
             if (!dbMsg) continue;
 
             // Get or create promise chain for this agent
@@ -345,63 +347,78 @@ function logAgentConfig(): void {
 
 // ─── Start ──────────────────────────────────────────────────────────────────
 
-// Initialize SQLite queue
-initQueueDb();
+async function main(): Promise<void> {
+    // Initialize Oracle queue via sidecar
+    await initQueueDb();
 
-// Recover stale messages from previous crash
-const recovered = recoverStaleMessages();
-if (recovered > 0) {
-    log('INFO', `Recovered ${recovered} stale message(s) from previous session`);
+    // Recover stale messages from previous crash
+    const recovered = await recoverStaleMessages();
+    if (recovered > 0) {
+        log('INFO', `Recovered ${recovered} stale message(s) from previous session`);
+    }
+
+    // Start the API server (passes conversations for queue status reporting)
+    const apiServer = startApiServer(conversations);
+
+    log('INFO', 'Queue processor started (Oracle-backed via sidecar)');
+    logAgentConfig();
+    emitEvent('processor_start', { agents: Object.keys(getAgents(getSettings())), teams: Object.keys(getTeams(getSettings())) });
+
+    // Event-driven: all messages come through the API server (same process)
+    queueEvents.on('message:enqueued', () => processQueue());
+
+    // Periodic maintenance
+    setInterval(async () => {
+        try {
+            const count = await recoverStaleMessages();
+            if (count > 0) log('INFO', `Recovered ${count} stale message(s)`);
+        } catch (e) {
+            log('ERROR', `Stale recovery error: ${(e as Error).message}`);
+        }
+    }, 5 * 60 * 1000); // every 5 min
+
+    setInterval(() => {
+        // Clean up old conversations (TTL: 30 min)
+        const cutoff = Date.now() - 30 * 60 * 1000;
+        for (const [id, conv] of conversations.entries()) {
+            if (conv.startTime < cutoff) {
+                log('WARN', `Conversation ${id} timed out after 30 min — cleaning up`);
+                conversations.delete(id);
+            }
+        }
+    }, 30 * 60 * 1000); // every 30 min
+
+    setInterval(async () => {
+        try {
+            const pruned = await pruneAckedResponses();
+            if (pruned > 0) log('INFO', `Pruned ${pruned} acked response(s)`);
+        } catch (e) {
+            log('ERROR', `Prune responses error: ${(e as Error).message}`);
+        }
+    }, 60 * 60 * 1000); // every 1 hr
+
+    setInterval(async () => {
+        try {
+            const pruned = await pruneCompletedMessages();
+            if (pruned > 0) log('INFO', `Pruned ${pruned} completed message(s)`);
+        } catch (e) {
+            log('ERROR', `Prune messages error: ${(e as Error).message}`);
+        }
+    }, 60 * 60 * 1000); // every 1 hr
+
+    // Graceful shutdown
+    const shutdown = async () => {
+        log('INFO', 'Shutting down queue processor...');
+        await closeQueueDb();
+        apiServer.close();
+        process.exit(0);
+    };
+
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
 }
 
-// Start the API server (passes conversations for queue status reporting)
-const apiServer = startApiServer(conversations);
-
-log('INFO', 'Queue processor started (SQLite-backed)');
-logAgentConfig();
-emitEvent('processor_start', { agents: Object.keys(getAgents(getSettings())), teams: Object.keys(getTeams(getSettings())) });
-
-// Event-driven: all messages come through the API server (same process)
-queueEvents.on('message:enqueued', () => processQueue());
-
-// Periodic maintenance
-setInterval(() => {
-    const count = recoverStaleMessages();
-    if (count > 0) log('INFO', `Recovered ${count} stale message(s)`);
-}, 5 * 60 * 1000); // every 5 min
-
-setInterval(() => {
-    // Clean up old conversations (TTL: 30 min)
-    const cutoff = Date.now() - 30 * 60 * 1000;
-    for (const [id, conv] of conversations.entries()) {
-        if (conv.startTime < cutoff) {
-            log('WARN', `Conversation ${id} timed out after 30 min — cleaning up`);
-            conversations.delete(id);
-        }
-    }
-}, 30 * 60 * 1000); // every 30 min
-
-setInterval(() => {
-    const pruned = pruneAckedResponses();
-    if (pruned > 0) log('INFO', `Pruned ${pruned} acked response(s)`);
-}, 60 * 60 * 1000); // every 1 hr
-
-setInterval(() => {
-    const pruned = pruneCompletedMessages();
-    if (pruned > 0) log('INFO', `Pruned ${pruned} completed message(s)`);
-}, 60 * 60 * 1000); // every 1 hr
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-    log('INFO', 'Shutting down queue processor...');
-    closeQueueDb();
-    apiServer.close();
-    process.exit(0);
-});
-
-process.on('SIGTERM', () => {
-    log('INFO', 'Shutting down queue processor...');
-    closeQueueDb();
-    apiServer.close();
-    process.exit(0);
+main().catch(error => {
+    console.error(`[TinyOraClaw] Fatal startup error: ${error.message}`);
+    process.exit(1);
 });

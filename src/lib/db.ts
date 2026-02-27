@@ -1,14 +1,41 @@
 /**
- * SQLite-backed message queue — replaces the file-based incoming/processing/outgoing directories.
+ * Oracle-backed message queue via TinyOraClaw sidecar HTTP API.
  *
- * Uses better-sqlite3 for synchronous, transactional access with WAL mode.
- * Single module-level singleton; call initQueueDb() before any other export.
+ * Replaces the upstream SQLite (better-sqlite3) module with async HTTP calls
+ * to the Python FastAPI sidecar running on TINYORACLAW_SERVICE_URL.
+ *
+ * All functions are async. The interfaces (DbMessage, DbResponse, etc.) remain
+ * compatible with upstream TinyClaw so channel clients and the queue processor
+ * work without structural changes — only await insertion is needed at call sites.
  */
 
-import Database from 'better-sqlite3';
-import path from 'path';
 import { EventEmitter } from 'events';
-import { TINYCLAW_HOME } from './config';
+
+// ── Sidecar config ──────────────────────────────────────────────────────────
+
+const SIDECAR_URL = (process.env.TINYORACLAW_SERVICE_URL || 'http://localhost:8100').replace(/\/$/, '');
+const SIDECAR_TOKEN = process.env.TINYORACLAW_SERVICE_TOKEN || '';
+
+function sidecarHeaders(): Record<string, string> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (SIDECAR_TOKEN) {
+        headers['Authorization'] = `Bearer ${SIDECAR_TOKEN}`;
+    }
+    return headers;
+}
+
+async function sidecarFetch(path: string, opts: RequestInit = {}): Promise<any> {
+    const url = `${SIDECAR_URL}${path}`;
+    const res = await fetch(url, {
+        ...opts,
+        headers: { ...sidecarHeaders(), ...(opts.headers as Record<string, string> || {}) },
+    });
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Sidecar ${opts.method || 'GET'} ${path} failed (${res.status}): ${text}`);
+    }
+    return res.json();
+}
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,281 +98,193 @@ export interface EnqueueResponseData {
 
 // ── Singleton ────────────────────────────────────────────────────────────────
 
-const QUEUE_DB_PATH = path.join(TINYCLAW_HOME, 'tinyclaw.db');
-const MAX_RETRIES = 5;
-
-let db: Database.Database | null = null;
-
 export const queueEvents = new EventEmitter();
+
+let _initialized = false;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
-export function initQueueDb(): void {
-    if (db) return;
+/**
+ * Check that the sidecar is reachable and healthy.
+ * Replaces the upstream initQueueDb() that created SQLite tables.
+ */
+export async function initQueueDb(): Promise<void> {
+    if (_initialized) return;
 
-    db = new Database(QUEUE_DB_PATH);
-    db.pragma('journal_mode = WAL');
-    db.pragma('busy_timeout = 5000');
-
-    db.exec(`
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message_id TEXT NOT NULL UNIQUE,
-            channel TEXT NOT NULL,
-            sender TEXT NOT NULL,
-            sender_id TEXT,
-            message TEXT NOT NULL,
-            agent TEXT,
-            files TEXT,
-            conversation_id TEXT,
-            from_agent TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            retry_count INTEGER NOT NULL DEFAULT 0,
-            last_error TEXT,
-            created_at INTEGER NOT NULL,
-            updated_at INTEGER NOT NULL,
-            claimed_by TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS responses (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            message_id TEXT NOT NULL,
-            channel TEXT NOT NULL,
-            sender TEXT NOT NULL,
-            sender_id TEXT,
-            message TEXT NOT NULL,
-            original_message TEXT NOT NULL,
-            agent TEXT,
-            files TEXT,
-            status TEXT NOT NULL DEFAULT 'pending',
-            created_at INTEGER NOT NULL,
-            acked_at INTEGER
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_messages_status_agent_created
-            ON messages(status, agent, created_at);
-        CREATE INDEX IF NOT EXISTS idx_responses_channel_status ON responses(channel, status);
-    `);
-
-    // Drop legacy indexes/tables
-    db.exec('DROP INDEX IF EXISTS idx_messages_status');
-    db.exec('DROP INDEX IF EXISTS idx_messages_agent');
-    db.exec('DROP TABLE IF EXISTS events');
-}
-
-function getDb(): Database.Database {
-    if (!db) throw new Error('Queue DB not initialized — call initQueueDb() first');
-    return db;
+    try {
+        const health = await sidecarFetch('/api/health');
+        if (health.status === 'ok' || health.status === 'healthy') {
+            _initialized = true;
+            console.log(`[TinyOraClaw] Sidecar connected at ${SIDECAR_URL}`);
+        } else {
+            console.warn(`[TinyOraClaw] Sidecar health check returned: ${JSON.stringify(health)}`);
+            _initialized = true; // allow operation even if DB is degraded
+        }
+    } catch (e) {
+        console.error(`[TinyOraClaw] Sidecar not reachable at ${SIDECAR_URL}: ${(e as Error).message}`);
+        console.error(`[TinyOraClaw] Make sure the sidecar is running: docker compose up tinyoraclaw-service -d`);
+        throw e;
+    }
 }
 
 // ── Messages (incoming queue) ────────────────────────────────────────────────
 
-export function enqueueMessage(data: EnqueueMessageData): number {
-    const d = getDb();
-    const now = Date.now();
-    const result = d.prepare(`
-        INSERT INTO messages (message_id, channel, sender, sender_id, message, agent, files, conversation_id, from_agent, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
-    `).run(
-        data.messageId,
-        data.channel,
-        data.sender,
-        data.senderId ?? null,
-        data.message,
-        data.agent ?? null,
-        data.files ? JSON.stringify(data.files) : null,
-        data.conversationId ?? null,
-        data.fromAgent ?? null,
-        now,
-        now,
-    );
-    const rowId = result.lastInsertRowid as number;
+export async function enqueueMessage(data: EnqueueMessageData): Promise<number> {
+    const body = {
+        messageId: data.messageId,
+        channel: data.channel,
+        sender: data.sender,
+        senderId: data.senderId || null,
+        message: data.message,
+        agent: data.agent || null,
+        files: data.files || null,
+        conversationId: data.conversationId || null,
+        fromAgent: data.fromAgent || null,
+    };
+
+    const result = await sidecarFetch('/api/queue/enqueue', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+
+    const rowId = result.id as number;
     queueEvents.emit('message:enqueued', { id: rowId, agent: data.agent });
     return rowId;
 }
 
 /**
  * Atomically claim the oldest pending message for a given agent.
- * Uses BEGIN IMMEDIATE to prevent concurrent claims.
+ * The sidecar uses SELECT FOR UPDATE SKIP LOCKED for concurrency safety.
  */
-export function claimNextMessage(agentId: string): DbMessage | null {
-    const d = getDb();
-    const claim = d.transaction(() => {
-        const row = d.prepare(`
-            SELECT * FROM messages
-            WHERE status = 'pending' AND (agent = ? OR (agent IS NULL AND ? = 'default'))
-            ORDER BY created_at ASC
-            LIMIT 1
-        `).get(agentId, agentId) as DbMessage | undefined;
+export async function claimNextMessage(agentId: string): Promise<DbMessage | null> {
+    const result = await sidecarFetch(`/api/queue/next/${encodeURIComponent(agentId)}`);
+    return result.message || null;
+}
 
-        if (!row) return null;
+export async function completeMessage(rowId: number): Promise<void> {
+    await sidecarFetch(`/api/queue/${rowId}/complete`, { method: 'PATCH' });
+}
 
-        d.prepare(`
-            UPDATE messages SET status = 'processing', claimed_by = ?, updated_at = ?
-            WHERE id = ?
-        `).run(agentId, Date.now(), row.id);
-
-        return { ...row, status: 'processing' as const, claimed_by: agentId };
+export async function failMessage(rowId: number, error: string): Promise<void> {
+    await sidecarFetch(`/api/queue/${rowId}/fail`, {
+        method: 'PATCH',
+        body: JSON.stringify({ error }),
     });
-
-    return claim.immediate();
-}
-
-export function completeMessage(rowId: number): void {
-    getDb().prepare(`
-        UPDATE messages SET status = 'completed', updated_at = ? WHERE id = ?
-    `).run(Date.now(), rowId);
-}
-
-export function failMessage(rowId: number, error: string): void {
-    const d = getDb();
-    const msg = d.prepare('SELECT retry_count FROM messages WHERE id = ?').get(rowId) as { retry_count: number } | undefined;
-    if (!msg) return;
-
-    const newCount = msg.retry_count + 1;
-    const newStatus = newCount >= MAX_RETRIES ? 'dead' : 'pending';
-
-    d.prepare(`
-        UPDATE messages SET status = ?, retry_count = ?, last_error = ?, claimed_by = NULL, updated_at = ?
-        WHERE id = ?
-    `).run(newStatus, newCount, error, Date.now(), rowId);
 }
 
 // ── Responses (outgoing queue) ───────────────────────────────────────────────
 
-export function enqueueResponse(data: EnqueueResponseData): number {
-    const d = getDb();
-    const now = Date.now();
-    const result = d.prepare(`
-        INSERT INTO responses (message_id, channel, sender, sender_id, message, original_message, agent, files, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
-    `).run(
-        data.messageId,
-        data.channel,
-        data.sender,
-        data.senderId ?? null,
-        data.message,
-        data.originalMessage,
-        data.agent ?? null,
-        data.files ? JSON.stringify(data.files) : null,
-        now,
-    );
-    return result.lastInsertRowid as number;
+export async function enqueueResponse(data: EnqueueResponseData): Promise<number> {
+    const body = {
+        messageId: data.messageId,
+        channel: data.channel,
+        sender: data.sender,
+        senderId: data.senderId || null,
+        message: data.message,
+        originalMessage: data.originalMessage,
+        agent: data.agent || null,
+        files: data.files || null,
+    };
+
+    const result = await sidecarFetch('/api/responses/enqueue', {
+        method: 'POST',
+        body: JSON.stringify(body),
+    });
+
+    return result.id as number;
 }
 
-export function getResponsesForChannel(channel: string): DbResponse[] {
-    return getDb().prepare(`
-        SELECT * FROM responses WHERE channel = ? AND status = 'pending' ORDER BY created_at ASC
-    `).all(channel) as DbResponse[];
+export async function getResponsesForChannel(channel: string): Promise<DbResponse[]> {
+    const result = await sidecarFetch(`/api/responses/pending?channel=${encodeURIComponent(channel)}`);
+    return result.responses || [];
 }
 
-export function ackResponse(responseId: number): void {
-    getDb().prepare(`
-        UPDATE responses SET status = 'acked', acked_at = ? WHERE id = ?
-    `).run(Date.now(), responseId);
+export async function ackResponse(responseId: number): Promise<void> {
+    await sidecarFetch(`/api/responses/${responseId}/ack`, { method: 'POST' });
 }
 
-export function getRecentResponses(limit: number): DbResponse[] {
-    return getDb().prepare(`
-        SELECT * FROM responses ORDER BY created_at DESC LIMIT ?
-    `).all(limit) as DbResponse[];
+export async function getRecentResponses(limit: number): Promise<DbResponse[]> {
+    const result = await sidecarFetch(`/api/responses/recent?limit=${limit}`);
+    return result.responses || [];
 }
 
 // ── Queue status & management ────────────────────────────────────────────────
 
-export function getQueueStatus(): {
+export async function getQueueStatus(): Promise<{
     pending: number; processing: number; completed: number; dead: number;
     responsesPending: number;
-} {
-    const d = getDb();
-    const counts = d.prepare(`
-        SELECT status, COUNT(*) as cnt FROM messages GROUP BY status
-    `).all() as { status: string; cnt: number }[];
+}> {
+    const result = await sidecarFetch('/api/queue/status');
+    return {
+        pending: result.pending ?? 0,
+        processing: result.processing ?? 0,
+        completed: result.completed ?? 0,
+        dead: result.dead ?? 0,
+        responsesPending: result.responsesPending ?? 0,
+    };
+}
 
-    const result = { pending: 0, processing: 0, completed: 0, dead: 0, responsesPending: 0 };
-    for (const row of counts) {
-        if (row.status in result) (result as any)[row.status] = row.cnt;
+export async function getDeadMessages(): Promise<DbMessage[]> {
+    const result = await sidecarFetch('/api/queue/dead');
+    return result.messages || [];
+}
+
+export async function retryDeadMessage(rowId: number): Promise<boolean> {
+    try {
+        await sidecarFetch(`/api/queue/dead/${rowId}/retry`, { method: 'POST' });
+        return true;
+    } catch {
+        return false;
     }
-
-    const respCount = d.prepare(`
-        SELECT COUNT(*) as cnt FROM responses WHERE status = 'pending'
-    `).get() as { cnt: number };
-    result.responsesPending = respCount.cnt;
-
-    return result;
 }
 
-export function getDeadMessages(): DbMessage[] {
-    return getDb().prepare(`
-        SELECT * FROM messages WHERE status = 'dead' ORDER BY updated_at DESC
-    `).all() as DbMessage[];
-}
-
-export function retryDeadMessage(rowId: number): boolean {
-    const result = getDb().prepare(`
-        UPDATE messages SET status = 'pending', retry_count = 0, claimed_by = NULL, updated_at = ?
-        WHERE id = ? AND status = 'dead'
-    `).run(Date.now(), rowId);
-    return result.changes > 0;
-}
-
-export function deleteDeadMessage(rowId: number): boolean {
-    const result = getDb().prepare(`
-        DELETE FROM messages WHERE id = ? AND status = 'dead'
-    `).run(rowId);
-    return result.changes > 0;
+export async function deleteDeadMessage(rowId: number): Promise<boolean> {
+    try {
+        await sidecarFetch(`/api/queue/dead/${rowId}`, { method: 'DELETE' });
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /**
- * Recover messages stuck in 'processing' for longer than thresholdMs (default 10 min).
+ * Recover messages stuck in 'processing' for longer than threshold.
  */
-export function recoverStaleMessages(thresholdMs = 10 * 60 * 1000): number {
-    const cutoff = Date.now() - thresholdMs;
-    const result = getDb().prepare(`
-        UPDATE messages SET status = 'pending', claimed_by = NULL, updated_at = ?
-        WHERE status = 'processing' AND updated_at < ?
-    `).run(Date.now(), cutoff);
-    return result.changes;
+export async function recoverStaleMessages(): Promise<number> {
+    const result = await sidecarFetch('/api/queue/recover-stale', { method: 'POST' });
+    return result.recovered ?? 0;
 }
 
 /**
- * Clean up acked responses older than the given threshold (default 24h).
+ * Clean up acked responses older than the given threshold.
  */
-export function pruneAckedResponses(olderThanMs = 24 * 60 * 60 * 1000): number {
-    const cutoff = Date.now() - olderThanMs;
-    const result = getDb().prepare(`
-        DELETE FROM responses WHERE status = 'acked' AND acked_at < ?
-    `).run(cutoff);
-    return result.changes;
+export async function pruneAckedResponses(): Promise<number> {
+    const result = await sidecarFetch('/api/queue/prune/responses', { method: 'DELETE' });
+    return result.pruned ?? 0;
 }
 
 /**
- * Clean up completed messages older than the given threshold (default 24h).
- * Dead messages are kept for manual review/retry.
+ * Clean up completed messages older than the given threshold.
  */
-export function pruneCompletedMessages(olderThanMs = 24 * 60 * 60 * 1000): number {
-    const cutoff = Date.now() - olderThanMs;
-    const result = getDb().prepare(
-        `DELETE FROM messages WHERE status = 'completed' AND updated_at < ?`
-    ).run(cutoff);
-    return result.changes;
+export async function pruneCompletedMessages(): Promise<number> {
+    const result = await sidecarFetch('/api/queue/prune/messages', { method: 'DELETE' });
+    return result.pruned ?? 0;
 }
 
 /**
- * Get all distinct agent values from pending messages (for processQueue iteration).
+ * Get all distinct agent values from pending messages.
  */
-export function getPendingAgents(): string[] {
-    const rows = getDb().prepare(`
-        SELECT DISTINCT COALESCE(agent, 'default') as agent FROM messages WHERE status = 'pending'
-    `).all() as { agent: string }[];
-    return rows.map(r => r.agent);
+export async function getPendingAgents(): Promise<string[]> {
+    const result = await sidecarFetch('/api/queue/pending-agents');
+    return result.agents || [];
 }
 
 // ── Lifecycle ────────────────────────────────────────────────────────────────
 
-export function closeQueueDb(): void {
-    if (db) {
-        db.close();
-        db = null;
-    }
+/**
+ * No-op — the sidecar manages its own Oracle connection pool.
+ * Kept for API compatibility with upstream TinyClaw.
+ */
+export async function closeQueueDb(): Promise<void> {
+    _initialized = false;
 }

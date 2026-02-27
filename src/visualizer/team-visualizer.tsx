@@ -12,7 +12,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { render, Box, Text, useApp, useInput } from 'ink';
 import http from 'http';
-import Database from 'better-sqlite3';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -25,19 +24,24 @@ const _localTinyclaw = path.join(__dirname_, '..', '..', '.tinyclaw');
 const TINYCLAW_HOME = fs.existsSync(path.join(_localTinyclaw, 'settings.json'))
     ? _localTinyclaw
     : path.join(os.homedir(), '.tinyclaw');
-const QUEUE_DB_PATH = path.join(TINYCLAW_HOME, 'tinyclaw.db');
 const SETTINGS_FILE = path.join(TINYCLAW_HOME, 'settings.json');
 
-// ─── SQLite helper ──────────────────────────────────────────────────────────
+// ─── Sidecar config ──────────────────────────────────────────────────────────
+const SIDECAR_URL = (process.env.TINYORACLAW_SERVICE_URL || 'http://localhost:8100').replace(/\/$/, '');
+const SIDECAR_TOKEN = process.env.TINYORACLAW_SERVICE_TOKEN || '';
 
-function openDb(): Database.Database | null {
+// ─── Sidecar helper ─────────────────────────────────────────────────────────
+
+async function fetchQueueStatus(): Promise<{ pending: number; dead: number }> {
     try {
-        if (!fs.existsSync(QUEUE_DB_PATH)) return null;
-        const db = new Database(QUEUE_DB_PATH, { readonly: true });
-        db.pragma('journal_mode = WAL');
-        return db;
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (SIDECAR_TOKEN) headers['Authorization'] = `Bearer ${SIDECAR_TOKEN}`;
+        const res = await fetch(`${SIDECAR_URL}/api/queue/status`, { headers });
+        if (!res.ok) return { pending: 0, dead: 0 };
+        const data = await res.json() as any;
+        return { pending: data.pending ?? 0, dead: data.dead ?? 0 };
     } catch {
-        return null;
+        return { pending: 0, dead: 0 };
     }
 }
 
@@ -509,28 +513,13 @@ function App({ filterTeamId, apiPort }: { filterTeamId: string | null; apiPort: 
         };
     }, [handleEvent, apiPort]);
 
-    // Poll queue depth + dead count from SQLite
+    // Poll queue depth + dead count from sidecar API
     useEffect(() => {
-        const pollTimer = setInterval(() => {
-            const db = openDb();
-            if (!db) return;
-            try {
-                const pending = db.prepare(
-                    "SELECT COUNT(*) as cnt FROM messages WHERE status = 'pending'"
-                ).get() as { cnt: number };
-                setQueueDepth(pending.cnt);
-
-                const dead = db.prepare(
-                    "SELECT COUNT(*) as cnt FROM messages WHERE status = 'dead'"
-                ).get() as { cnt: number };
-                setDeadCount(dead.cnt);
-            } catch {
-                setQueueDepth(0);
-                setDeadCount(0);
-            } finally {
-                try { db.close(); } catch { /* ignore */ }
-            }
-        }, 1000);
+        const pollTimer = setInterval(async () => {
+            const status = await fetchQueueStatus();
+            setQueueDepth(status.pending);
+            setDeadCount(status.dead);
+        }, 2000);
         return () => clearInterval(pollTimer);
     }, []);
 

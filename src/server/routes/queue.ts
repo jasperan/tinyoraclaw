@@ -10,8 +10,8 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
     const app = new Hono();
 
     // GET /api/queue/status
-    app.get('/api/queue/status', (c) => {
-        const status = getQueueStatus();
+    app.get('/api/queue/status', async (c) => {
+        const status = await getQueueStatus();
         return c.json({
             incoming: status.pending,
             processing: status.processing,
@@ -22,9 +22,9 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
     });
 
     // GET /api/responses
-    app.get('/api/responses', (c) => {
+    app.get('/api/responses', async (c) => {
         const limit = parseInt(c.req.query('limit') || '20', 10);
-        const responses = getRecentResponses(limit);
+        const responses = await getRecentResponses(limit);
         return c.json(responses.map(r => ({
             channel: r.channel,
             sender: r.sender,
@@ -39,10 +39,10 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
     });
 
     // GET /api/responses/pending?channel=whatsapp
-    app.get('/api/responses/pending', (c) => {
+    app.get('/api/responses/pending', async (c) => {
         const channel = c.req.query('channel');
         if (!channel) return c.json({ error: 'channel query param required' }, 400);
-        const responses = getResponsesForChannel(channel);
+        const responses = await getResponsesForChannel(channel);
         return c.json(responses.map(r => ({
             id: r.id,
             channel: r.channel,
@@ -69,7 +69,7 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
         }
 
         const messageId = `proactive_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-        enqueueResponse({
+        await enqueueResponse({
             channel,
             sender,
             senderId,
@@ -85,30 +85,30 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
     });
 
     // POST /api/responses/:id/ack
-    app.post('/api/responses/:id/ack', (c) => {
+    app.post('/api/responses/:id/ack', async (c) => {
         const id = parseInt(c.req.param('id'), 10);
-        ackResponse(id);
+        await ackResponse(id);
         return c.json({ ok: true });
     });
 
     // GET /api/queue/dead
-    app.get('/api/queue/dead', (c) => {
-        return c.json(getDeadMessages());
+    app.get('/api/queue/dead', async (c) => {
+        return c.json(await getDeadMessages());
     });
 
     // POST /api/queue/dead/:id/retry
-    app.post('/api/queue/dead/:id/retry', (c) => {
+    app.post('/api/queue/dead/:id/retry', async (c) => {
         const id = parseInt(c.req.param('id'), 10);
-        const ok = retryDeadMessage(id);
+        const ok = await retryDeadMessage(id);
         if (!ok) return c.json({ error: 'dead message not found' }, 404);
         log('INFO', `[API] Dead message ${id} retried`);
         return c.json({ ok: true });
     });
 
     // DELETE /api/queue/dead/:id
-    app.delete('/api/queue/dead/:id', (c) => {
+    app.delete('/api/queue/dead/:id', async (c) => {
         const id = parseInt(c.req.param('id'), 10);
-        const ok = deleteDeadMessage(id);
+        const ok = await deleteDeadMessage(id);
         if (!ok) return c.json({ error: 'dead message not found' }, 404);
         log('INFO', `[API] Dead message ${id} deleted`);
         return c.json({ ok: true });
