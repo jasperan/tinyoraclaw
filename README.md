@@ -16,6 +16,12 @@
       <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="MIT License">
     </a>
   </p>
+
+  <p>
+    <a href="https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/jasperan/tinyoraclaw/raw/main/deploy/oci/orm/tinyoraclaw-orm.zip">
+      <img src="https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg" alt="Deploy to Oracle Cloud"/>
+    </a>
+  </p>
 </div>
 
 ---
@@ -197,6 +203,27 @@ The Python FastAPI sidecar exposes these endpoints on port 8100:
 | `/api/sessions/save` | POST | Persist chat session |
 | `/api/sessions/{team_id}` | GET | Load session history |
 | `/api/transcripts/log` | POST | Write audit entry |
+
+## Deploy to Oracle Cloud (One-Click)
+
+Deploy a fully configured TinyOraClaw instance on OCI with Oracle AI Database — all automated.
+
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/jasperan/tinyoraclaw/raw/main/deploy/oci/orm/tinyoraclaw-orm.zip)
+
+**What gets deployed:**
+- OCI Compute instance (shape of your choice, ARM A1.Flex is Always Free)
+- Oracle AI Database 26ai Free container (or managed Autonomous DB)
+- TinyOraClaw Python sidecar (auto-init schema)
+- Node.js 22 with TinyClaw built and ready
+- Systemd service for the queue processor
+
+**After deployment:**
+```bash
+ssh opc@<public-ip>
+cd /opt/tinyoraclaw
+./tinyclaw.sh setup        # configure agents
+systemctl start tinyoraclaw-queue  # start processing
+```
 
 ## Sister Projects
 
