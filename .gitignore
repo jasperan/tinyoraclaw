@@ -17,6 +17,19 @@ dist/
 # OS files
 .DS_Store
 
+# Python
+*.pyc
+__pycache__/
+.venv/
+*.egg-info/
+
+# Oracle sidecar
+tinyoraclaw-service/.venv/
+tinyoraclaw-service/*.egg-info/
+
+# Design docs (local only)
+docs/plans/
+
 # Editor
 .vscode/
 .idea/
