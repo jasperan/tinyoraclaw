@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./docs/images/tinyclaw.png" alt="TinyOraClaw" width="600" />
+  <img src="./docs/images/tinyoraclaw.png" alt="TinyOraClaw" width="600" />
 
   <h1>TinyOraClaw</h1>
 
