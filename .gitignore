@@ -34,4 +34,18 @@ docs/plans/
 .vscode/
 .idea/
 *.swp
-__pycache__/
+
+# AI workload files
+.claude/
+CLAUDE.md
+AGENTS.md
+docs/AGENTS.md
+.mcp*
+mcp.json
+.cursorrules
+.cursor/
+.windsurf/
+.roomodes
+.roo/
+.copilot/
+.github/copilot/
