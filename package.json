@@ -10,7 +10,8 @@
     "discord": "node dist/channels/discord-client.js",
     "telegram": "node dist/channels/telegram-client.js",
     "queue": "node dist/queue-processor.js",
-    "visualize": "node dist/visualizer/team-visualizer.js"
+    "visualize": "node dist/visualizer/team-visualizer.js",
+    "tinyoffice": "cd tinyoffice && npm run dev"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.9",
