@@ -66,11 +66,11 @@ Plus Oracle AI Database:
 ┌─────────────────────────────────────────────────┐
 │  TinyClaw (TypeScript/Node.js)                  │
 │  ├── Channels: Discord, Telegram, WhatsApp      │
-│  ├── Hono API Server (:3777)                    │
-│  ├── Queue Processor                            │
-│  └── Agent Coordination                         │
-│           │ HTTP/REST                            │
-│           ▼                                      │
+│  ├── Hono API Server (:3777) ◄──────────┐      │
+│  ├── Queue Processor                     │      │
+│  └── Agent Coordination                  │ SSE  │
+│           │ HTTP/REST                    │      │
+│           ▼                              │      │
 │  TinyOraClaw Service (Python FastAPI :8100)      │
 │  ├── Message Queue API                          │
 │  ├── Memory Service (VECTOR_EMBEDDING)          │
@@ -87,6 +87,12 @@ Plus Oracle AI Database:
 │  ├── TINY_TRANSCRIPTS (audit log)                │
 │  ├── TINY_STATE      (agent K-V store)           │
 │  └── TINY_META       (schema versioning)         │
+├─────────────────────────────────────────────────┤
+│  TinyOffice (Next.js :3000) ─────────────┘      │
+│  ├── Real-time agent/team dashboard             │
+│  ├── Web chat console                           │
+│  ├── Kanban task board                          │
+│  └── Logs & settings viewer                     │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -132,7 +138,14 @@ npm run build
 # Set up agents via the TinyClaw setup wizard
 ./tinyclaw.sh setup
 
-# Start the queue processor (now Oracle-backed)
+# Start everything (queue, channels, heartbeat, TinyOffice dashboard)
+./tinyclaw.sh start
+```
+
+**TinyOffice** launches automatically at [http://localhost:3000](http://localhost:3000) — open it in your browser to watch agents communicate in real time, manage teams, chat via the web console, and monitor the message queue.
+
+To run just the queue processor standalone:
+```bash
 npm run queue
 ```
 
@@ -223,6 +236,29 @@ ssh opc@<public-ip>
 cd /opt/tinyoraclaw
 ./tinyclaw.sh setup        # configure agents
 systemctl start tinyoraclaw-queue  # start processing
+```
+
+## TinyOffice Dashboard
+
+TinyOffice is a Next.js web dashboard that launches automatically with `./tinyclaw.sh start`. It connects to the Hono API server via SSE for real-time updates.
+
+**URL:** [http://localhost:3000](http://localhost:3000) (starts automatically)
+
+| Feature | Description |
+|---------|-------------|
+| **Live Dashboard** | Real-time agent activity via Server-Sent Events |
+| **Web Chat Console** | Send messages to `@agent` or `@team` from the browser |
+| **Agent & Team Management** | Create, edit, and delete agents and teams |
+| **Kanban Task Board** | Drag-and-drop task management with agent assignment |
+| **Logs Viewer** | Live event stream and historical log browsing |
+| **Settings Editor** | Edit `settings.json` directly from the UI |
+| **Office View** | Visual simulation of agent workspace |
+
+To run TinyOffice standalone (without the full daemon):
+```bash
+npm run tinyoffice
+# or
+cd tinyoffice && npm run dev
 ```
 
 ## Sister Projects
