@@ -129,9 +129,15 @@ start_daemon() {
         log_tail_cmd="$log_tail_cmd $LOG_DIR/${ch}.log"
     done
 
+    # Install TinyOffice dependencies if needed
+    if [ ! -d "$SCRIPT_DIR/tinyoffice/node_modules" ]; then
+        echo -e "${YELLOW}Installing TinyOffice dependencies...${NC}"
+        (cd "$SCRIPT_DIR/tinyoffice" && npm install)
+    fi
+
     # --- Build tmux session dynamically ---
-    # Total panes = N channels + 3 (queue, heartbeat, logs)
-    local total_panes=$(( ${#ACTIVE_CHANNELS[@]} + 3 ))
+    # Total panes = N channels + 4 (queue, heartbeat, tinyoffice, logs)
+    local total_panes=$(( ${#ACTIVE_CHANNELS[@]} + 4 ))
 
     tmux new-session -d -s "$TMUX_SESSION" -n "tinyclaw" -c "$SCRIPT_DIR"
 
@@ -159,6 +165,11 @@ start_daemon() {
     # Heartbeat pane
     tmux send-keys -t "$TMUX_SESSION:0.$pane_idx" "cd '$SCRIPT_DIR' && ./lib/heartbeat-cron.sh" C-m
     tmux select-pane -t "$TMUX_SESSION:0.$pane_idx" -T "Heartbeat"
+    pane_idx=$((pane_idx + 1))
+
+    # TinyOffice dashboard pane
+    tmux send-keys -t "$TMUX_SESSION:0.$pane_idx" "cd '$SCRIPT_DIR/tinyoffice' && npm run dev" C-m
+    tmux select-pane -t "$TMUX_SESSION:0.$pane_idx" -T "TinyOffice"
     pane_idx=$((pane_idx + 1))
 
     # Logs pane
@@ -238,6 +249,8 @@ start_daemon() {
     channel_names=$(IFS='|'; echo "${ACTIVE_CHANNELS[*]}")
 
     echo ""
+    echo -e "${GREEN}TinyOffice dashboard: ${BLUE}http://localhost:3000${NC}"
+    echo ""
     echo -e "${GREEN}Commands:${NC}"
     echo "  Status:  tinyclaw status"
     echo "  Logs:    tinyclaw logs [$channel_names|queue]"
@@ -263,6 +276,7 @@ stop_daemon() {
     done
     pkill -f "dist/queue-processor.js" || true
     pkill -f "heartbeat-cron.sh" || true
+    pkill -f "next dev.*tinyoffice" || true
 
     echo -e "${GREEN}✓ TinyClaw stopped${NC}"
     log "Daemon stopped"
@@ -338,6 +352,12 @@ status_daemon() {
         echo -e "Heartbeat:       ${GREEN}Running${NC}"
     else
         echo -e "Heartbeat:       ${RED}Not Running${NC}"
+    fi
+
+    if pgrep -f "next dev.*tinyoffice" > /dev/null || pgrep -f "next-server.*tinyoffice" > /dev/null; then
+        echo -e "TinyOffice:      ${GREEN}Running${NC} (http://localhost:3000)"
+    else
+        echo -e "TinyOffice:      ${RED}Not Running${NC}"
     fi
 
     # Recent activity per channel (only show if log file exists)
