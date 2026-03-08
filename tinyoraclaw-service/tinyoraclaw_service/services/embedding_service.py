@@ -1,6 +1,7 @@
 import array
 import asyncio
 import logging
+import threading
 
 import oracledb
 
@@ -11,12 +12,14 @@ class EmbeddingService:
     """Embedding service using Oracle's in-database ONNX model via VECTOR_EMBEDDING().
 
     Uses a dedicated synchronous connection for embedding operations,
-    following the OracLaw pattern.
+    following the OracLaw pattern. A threading lock protects the shared
+    connection from concurrent access via run_in_executor.
     """
 
     def __init__(self, settings):
         self.settings = settings
         self._conn: oracledb.Connection | None = None
+        self._lock = threading.Lock()
 
     def _create_sync_connection(self) -> oracledb.Connection:
         """Create a synchronous connection for Oracle embedding operations."""
@@ -33,7 +36,7 @@ class EmbeddingService:
 
     async def initialize(self):
         """Create a dedicated synchronous connection for embedding ops."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         if await self.check_onnx_loaded():
             try:
@@ -79,7 +82,7 @@ class EmbeddingService:
     async def check_onnx_loaded(self) -> bool:
         """Check if ONNX model is loaded in the database."""
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             conn = await loop.run_in_executor(None, self._create_sync_connection)
             try:
                 cursor = conn.cursor()
@@ -97,7 +100,7 @@ class EmbeddingService:
 
     async def load_onnx_model(self):
         """Load the ONNX embedding model into Oracle."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         conn = await loop.run_in_executor(None, self._create_sync_connection)
         try:
             cursor = conn.cursor()
@@ -123,24 +126,28 @@ class EmbeddingService:
         if not self._conn:
             raise RuntimeError("EmbeddingService not initialized or ONNX model not available")
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(None, self._embed_query_sync, text)
 
     def _embed_query_sync(self, text: str) -> list[float]:
-        """Synchronous database embedding for a single text."""
-        cursor = self._conn.cursor()
-        cursor.execute(
-            f"SELECT VECTOR_EMBEDDING({self.settings.oracle_onnx_model} "
-            "USING :text AS DATA) FROM DUAL",
-            {"text": text[:8000]},  # Truncate to model limit
-        )
-        row = cursor.fetchone()
-        if not row or row[0] is None:
-            return []
-        vec = row[0]
-        if isinstance(vec, bytes):
-            return list(array.array("f", vec))
-        return list(vec)
+        """Synchronous database embedding for a single text.
+
+        Thread-safe: uses a lock to protect the shared connection.
+        """
+        with self._lock:
+            cursor = self._conn.cursor()
+            cursor.execute(
+                f"SELECT VECTOR_EMBEDDING({self.settings.oracle_onnx_model} "
+                "USING :text AS DATA) FROM DUAL",
+                {"text": text[:8000]},  # Truncate to model limit
+            )
+            row = cursor.fetchone()
+            if not row or row[0] is None:
+                return []
+            vec = row[0]
+            if isinstance(vec, bytes):
+                return list(array.array("f", vec))
+            return list(vec)
 
     async def close(self):
         """Release resources."""
