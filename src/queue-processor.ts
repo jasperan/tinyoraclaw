@@ -53,7 +53,10 @@ async function processMessage(dbMsg: DbMessage): Promise<void> {
         const rawMessage = dbMsg.message;
         const messageId = dbMsg.message_id;
         const isInternal = !!dbMsg.conversation_id;
-        const files: string[] = dbMsg.files ? JSON.parse(dbMsg.files) : [];
+        let files: string[] = [];
+        if (dbMsg.files) {
+            try { files = JSON.parse(dbMsg.files); } catch { /* malformed files JSON — ignore */ }
+        }
 
         // Build a MessageData-like object for compatibility
         const messageData: MessageData = {

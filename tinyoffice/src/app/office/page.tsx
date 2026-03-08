@@ -107,10 +107,6 @@ function parseMessage(msg: string): MsgSegment[] {
   return segments;
 }
 
-// Lerp between two values
-function lerp(a: number, b: number, t: number) {
-  return a + (b - a) * t;
-}
 
 export default function OfficePage() {
   const { data: agents } = usePolling<Record<string, AgentConfig>>(getAgents, 5000);

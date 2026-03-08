@@ -93,7 +93,7 @@ export async function invokeAgent(
         if (modelId) {
             codexArgs.push('--model', modelId);
         }
-        codexArgs.push('--skip-git-repo-check', '--dangerously-bypass-approvals-and-sandbox', '--json', message);
+        codexArgs.push('--skip-git-repo-check', '--dangerously-bypass-approvals-and-sandbox', '--json', '--', message);
 
         const codexOutput = await runCommand('codex', codexArgs, workingDir);
 
@@ -133,7 +133,7 @@ export async function invokeAgent(
         if (continueConversation) {
             opencodeArgs.push('-c');
         }
-        opencodeArgs.push(message);
+        opencodeArgs.push('--', message);
 
         const opencodeOutput = await runCommand('opencode', opencodeArgs, workingDir);
 
@@ -170,7 +170,7 @@ export async function invokeAgent(
         if (continueConversation) {
             claudeArgs.push('-c');
         }
-        claudeArgs.push('-p', message);
+        claudeArgs.push('-p', '--', message);
 
         return await runCommand('claude', claudeArgs, workingDir);
     }

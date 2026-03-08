@@ -25,6 +25,7 @@ import logsRoutes from './routes/logs';
 import chatsRoutes from './routes/chats';
 
 const API_PORT = parseInt(process.env.TINYCLAW_API_PORT || '3777', 10);
+const API_TOKEN = process.env.TINYCLAW_API_TOKEN || '';
 
 /**
  * Create and start the API server.
@@ -40,6 +41,24 @@ export function startApiServer(
 
     // CORS middleware
     app.use('/*', cors());
+
+    // Bearer token authentication (when TINYCLAW_API_TOKEN is set)
+    if (API_TOKEN) {
+        app.use('/api/*', async (c, next) => {
+            // Allow health check without auth
+            if (c.req.path === '/api/health') {
+                return next();
+            }
+            const authHeader = c.req.header('Authorization');
+            if (!authHeader || authHeader !== `Bearer ${API_TOKEN}`) {
+                return c.json({ error: 'Unauthorized' }, 401);
+            }
+            return next();
+        });
+        log('INFO', 'API authentication enabled (TINYCLAW_API_TOKEN set)');
+    } else {
+        log('WARN', 'API authentication disabled — set TINYCLAW_API_TOKEN to secure the API');
+    }
 
     // Mount route modules
     app.route('/', messagesRoutes);

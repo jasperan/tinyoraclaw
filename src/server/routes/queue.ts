@@ -23,7 +23,7 @@ export function createQueueRoutes(conversations: Map<string, Conversation>) {
 
     // GET /api/responses
     app.get('/api/responses', async (c) => {
-        const limit = parseInt(c.req.query('limit') || '20', 10);
+        const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '20', 10), 1), 200);
         const responses = await getRecentResponses(limit);
         return c.json(responses.map(r => ({
             channel: r.channel,

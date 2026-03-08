@@ -188,8 +188,17 @@ async function sendTelegramMessage(
     }
 }
 
-// Download a file from URL to local path
-function downloadFile(url: string, destPath: string): Promise<void> {
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_REDIRECTS = 5;
+
+// Download a file from URL to local path with size limit and redirect cap
+function downloadFile(url: string, destPath: string, redirectCount = 0): Promise<void> {
+    if (redirectCount > MAX_REDIRECTS) {
+        return Promise.reject(new Error('Too many redirects'));
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return Promise.reject(new Error(`Blocked download from non-HTTP URL: ${url}`));
+    }
     return new Promise((resolve, reject) => {
         const file = fs.createWriteStream(destPath);
         const request = (url.startsWith('https') ? https.get(url, handleResponse) : http.get(url, handleResponse));
@@ -200,10 +209,27 @@ function downloadFile(url: string, destPath: string): Promise<void> {
                 if (redirectUrl) {
                     file.close();
                     fs.unlinkSync(destPath);
-                    downloadFile(redirectUrl, destPath).then(resolve).catch(reject);
+                    downloadFile(redirectUrl, destPath, redirectCount + 1).then(resolve).catch(reject);
                     return;
                 }
             }
+            const contentLength = parseInt(response.headers['content-length'] || '0', 10);
+            if (contentLength > MAX_FILE_SIZE) {
+                file.close();
+                fs.unlink(destPath, () => {});
+                reject(new Error(`File too large: ${contentLength} bytes (max ${MAX_FILE_SIZE})`));
+                return;
+            }
+            let downloadedBytes = 0;
+            response.on('data', (chunk: Buffer) => {
+                downloadedBytes += chunk.length;
+                if (downloadedBytes > MAX_FILE_SIZE) {
+                    response.destroy();
+                    file.close();
+                    fs.unlink(destPath, () => {});
+                    reject(new Error(`File download exceeded ${MAX_FILE_SIZE} bytes`));
+                }
+            });
             response.pipe(file);
             file.on('finish', () => { file.close(); resolve(); });
         }

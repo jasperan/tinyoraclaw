@@ -31,12 +31,18 @@ export function handleLongResponse(
 
 /**
  * Collect files from a response text.
+ * Only allows files within the FILES_DIR to prevent arbitrary file exfiltration.
  */
 export function collectFiles(response: string, fileSet: Set<string>): void {
     const fileRegex = /\[send_file:\s*([^\]]+)\]/g;
+    const allowedDir = path.resolve(FILES_DIR);
     let match: RegExpExecArray | null;
     while ((match = fileRegex.exec(response)) !== null) {
-        const filePath = match[1].trim();
+        const filePath = path.resolve(match[1].trim());
+        if (!filePath.startsWith(allowedDir + path.sep)) {
+            log('WARN', `Blocked file exfiltration attempt: ${filePath}`);
+            continue;
+        }
         if (fs.existsSync(filePath)) fileSet.add(filePath);
     }
 }

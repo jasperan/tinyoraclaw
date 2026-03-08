@@ -57,7 +57,11 @@ app.put('/api/tasks/reorder', async (c) => {
         return c.json({ error: 'columns map is required' }, 400);
     }
     const tasks = readTasks();
+    const validStatuses: TaskStatus[] = ['backlog', 'in_progress', 'review', 'done'];
     for (const [status, taskIds] of Object.entries(body.columns)) {
+        if (!validStatuses.includes(status as TaskStatus)) {
+            return c.json({ error: `Invalid status: ${status}` }, 400);
+        }
         for (const taskId of taskIds) {
             const task = tasks.find(t => t.id === taskId);
             if (task) {
