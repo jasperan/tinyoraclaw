@@ -125,7 +125,7 @@ case "${1:-}" in
                     tmp_file="$SETTINGS_FILE.tmp"
                     if [ -n "$MODEL_ARG" ]; then
                         # Set both provider and model
-                        jq ".models.provider = \"anthropic\" | .models.anthropic.model = \"$MODEL_ARG\"" "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
+                        jq --arg model "$MODEL_ARG" '.models.provider = "anthropic" | .models.anthropic.model = $model' "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
                         echo -e "${GREEN}✓ Switched to Anthropic provider with model: $MODEL_ARG${NC}"
                     else
                         # Set provider only
@@ -145,7 +145,7 @@ case "${1:-}" in
                     tmp_file="$SETTINGS_FILE.tmp"
                     if [ -n "$MODEL_ARG" ]; then
                         # Set both provider and model (supports any model name)
-                        jq ".models.provider = \"openai\" | .models.openai.model = \"$MODEL_ARG\"" "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
+                        jq --arg model "$MODEL_ARG" '.models.provider = "openai" | .models.openai.model = $model' "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
                         echo -e "${GREEN}✓ Switched to OpenAI/Codex provider with model: $MODEL_ARG${NC}"
                         echo ""
                         echo "Note: Make sure you have the 'codex' CLI installed and authenticated."
@@ -203,7 +203,7 @@ case "${1:-}" in
 
                     # Update model using jq
                     tmp_file="$SETTINGS_FILE.tmp"
-                    jq ".models.anthropic.model = \"$2\"" "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
+                    jq --arg model "$2" '.models.anthropic.model = $model' "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
 
                     echo -e "${GREEN}✓ Model switched to: $2${NC}"
                     echo ""
@@ -217,7 +217,7 @@ case "${1:-}" in
 
                     # Update model using jq
                     tmp_file="$SETTINGS_FILE.tmp"
-                    jq ".models.openai.model = \"$2\"" "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
+                    jq --arg model "$2" '.models.openai.model = $model' "$SETTINGS_FILE" > "$tmp_file" && mv "$tmp_file" "$SETTINGS_FILE"
 
                     echo -e "${GREEN}✓ Model switched to: $2${NC}"
                     echo ""

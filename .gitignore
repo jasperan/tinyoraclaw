@@ -67,3 +67,9 @@ docs/*.md
 *_FEATURES.md
 *_ENHANCEMENTS.md
 *_REPORT.md
+
+# Terraform state (contains secrets)
+*.tfstate
+*.tfstate.backup
+.terraform/
+.terraform.lock.hcl
