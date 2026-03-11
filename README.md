@@ -111,6 +111,29 @@ Upstream TinyClaw connects to the sidecar via HTTP/REST, replacing all SQLite ca
 
 ## Quick Start
 
+<!-- one-command-install -->
+> **One-command install** — clone, configure, and run in a single step:
+>
+> ```bash
+> curl -fsSL https://raw.githubusercontent.com/jasperan/tinyoraclaw/main/install.sh | bash
+> ```
+>
+> <details><summary>Advanced options</summary>
+>
+> Override install location:
+> ```bash
+> PROJECT_DIR=/opt/myapp curl -fsSL https://raw.githubusercontent.com/jasperan/tinyoraclaw/main/install.sh | bash
+> ```
+>
+> Or install manually:
+> ```bash
+> git clone https://github.com/jasperan/tinyoraclaw.git
+> cd tinyoraclaw
+> # See below for setup instructions
+> ```
+> </details>
+
+
 ### 1. Clone
 
 ```bash
