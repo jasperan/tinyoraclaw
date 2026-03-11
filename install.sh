@@ -3,10 +3,13 @@ set -euo pipefail
 
 # ============================================================
 # tinyoraclaw — One-Command Installer
-# ---
+# What is TinyOraClaw?
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/jasperan/tinyoraclaw/main/install.sh | bash
+#
+# Override install location:
+#   PROJECT_DIR=/opt/myapp curl -fsSL ... | bash
 # ============================================================
 
 REPO_URL="https://github.com/jasperan/tinyoraclaw.git"
@@ -33,7 +36,7 @@ print_banner() {
     echo ""
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo -e "${BOLD}  tinyoraclaw${NC}"
-    echo -e "  ---"
+    echo -e "  What is TinyOraClaw?"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
 }
