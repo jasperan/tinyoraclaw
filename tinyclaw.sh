@@ -251,6 +251,22 @@ case "${1:-}" in
         fi
         node "$SCRIPT_DIR/packages/visualizer/dist/chatroom-viewer.js" --team "$CHATROOM_TEAM"
         ;;
+    office)
+        # Install tinyoffice deps if needed
+        if [ ! -d "$SCRIPT_DIR/tinyoffice/node_modules" ]; then
+            echo -e "${BLUE}Installing TinyOffice dependencies...${NC}"
+            (cd "$SCRIPT_DIR/tinyoffice" && npm install)
+        fi
+        # Build if .next doesn't exist or source is newer
+        if [ ! -d "$SCRIPT_DIR/tinyoffice/.next" ] || \
+           [ -n "$(find "$SCRIPT_DIR/tinyoffice/src" -newer "$SCRIPT_DIR/tinyoffice/.next" -print -quit 2>/dev/null)" ]; then
+            echo -e "${BLUE}Building TinyOffice...${NC}"
+            (cd "$SCRIPT_DIR/tinyoffice" && npm run build)
+        fi
+        # Start Next.js production server
+        echo -e "${GREEN}Starting TinyOffice on http://localhost:3000${NC}"
+        (cd "$SCRIPT_DIR/tinyoffice" && npm run start)
+        ;;
     pairing)
         node "$CLI/pairing.js" "${2:-}" "${3:-}" "${4:-}"
         ;;
@@ -270,7 +286,7 @@ case "${1:-}" in
         local_names=$(IFS='|'; echo "${ALL_CHANNELS[*]}")
         echo -e "${BLUE}TinyClaw - Claude Code + Messaging Channels${NC}"
         echo ""
-        echo "Usage: $0 {start|stop|restart|status|setup|send|logs|reset <agent_id>|channels|provider|model|agent|team|chatroom|pairing|update|version|attach}"
+        echo "Usage: $0 {start|stop|restart|status|setup|send|logs|reset <agent_id>|channels|provider|model|agent|team|chatroom|office|pairing|update|version|attach}"
         echo ""
         echo "Commands:"
         echo "  start                    Start TinyClaw"
@@ -288,6 +304,7 @@ case "${1:-}" in
         echo "  agent {list|add|remove|show|reset|provider}  Manage agents"
         echo "  team {list|add|remove|show|add-agent|remove-agent|visualize}  Manage teams"
         echo "  chatroom <team_id>       Live chat room viewer for a team"
+        echo "  office                   Start TinyOffice web portal (http://localhost:3000)"
         echo "  pairing {pending|approved|list|approve <code>|unpair <channel> <sender_id>}  Manage sender approvals"
         echo "  update                   Update TinyClaw to latest version"
         echo "  version                  Show current version"

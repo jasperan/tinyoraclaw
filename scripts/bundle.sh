@@ -79,6 +79,7 @@ cp -r scripts "$BUNDLE_DIR/"
 cp -r lib "$BUNDLE_DIR/"
 cp -r docs "$BUNDLE_DIR/" 2>/dev/null || true
 cp -r .agents "$BUNDLE_DIR/" 2>/dev/null || true
+cp -r tinyoffice/ "$BUNDLE_DIR/"
 
 cp tinyclaw.sh "$BUNDLE_DIR/"
 cp package.json "$BUNDLE_DIR/"
