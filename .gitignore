@@ -73,3 +73,12 @@ docs/*.md
 *.tfstate.backup
 .terraform/
 .terraform.lock.hcl
+
+.agents/
+.crush/
+.openhands/
+
+# Auto-added by install-pre-commit-hooks.sh
+task_plan.md
+findings.md
+progress.md
