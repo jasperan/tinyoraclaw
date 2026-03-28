@@ -14,6 +14,7 @@ from .services.embedding_service import EmbeddingService
 from .services.memory_service import MemoryService
 from .services.queue_service import QueueService
 from .services.session_service import SessionService
+from .services.state_service import StateService
 from .services.transcript_service import TranscriptService
 from .api import api_router
 
@@ -73,15 +74,17 @@ async def lifespan(app: FastAPI):
         app.state.memory_service = None
         logger.warning("Memory services unavailable (no pool)")
 
-    # Create session + transcript services
+    # Create session + state + transcript services
     if pool:
         app.state.session_service = SessionService(pool)
+        app.state.state_service = StateService(pool)
         app.state.transcript_service = TranscriptService(pool)
-        logger.info("SessionService + TranscriptService initialized")
+        logger.info("SessionService + StateService + TranscriptService initialized")
     else:
         app.state.session_service = None
+        app.state.state_service = None
         app.state.transcript_service = None
-        logger.warning("SessionService + TranscriptService unavailable (no pool)")
+        logger.warning("SessionService + StateService + TranscriptService unavailable (no pool)")
 
     yield
 

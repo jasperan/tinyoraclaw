@@ -16,6 +16,9 @@ dist/
 .openhands/
 .claude/
 docs/plans/
+progress.md
+findings.md
+task_plan.md
 
 .wwebjs_cache
 *.log

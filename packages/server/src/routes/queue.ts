@@ -6,6 +6,7 @@ import {
     getDeadMessages, retryDeadMessage, deleteDeadMessage,
     getProcessingMessages, failMessage, getActiveAgentIds, killAgentProcess, queueEvents,
 } from '@tinyagi/core';
+import { conversations } from '@tinyagi/teams';
 
 function parseMaybeJson<T>(value: unknown): T | undefined {
     if (value == null) return undefined;
@@ -26,6 +27,7 @@ export function createQueueRoutes() {
             completed: status.completed,
             dead: status.dead,
             outgoing: status.responsesPending,
+            activeConversations: conversations.size,
         });
     });
 

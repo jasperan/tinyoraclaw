@@ -1,8 +1,8 @@
 <div align="center">
-  <img src="./docs/images/tinyagi.png" alt="TinyAGI" width="600" />
-  <h1>TinyAGI 🦞</h1>
-  <p><strong>Multi-agent, Multi-team, Multi-channel, 24/7 AI assistant</strong></p>
-  <p>Run multiple teams of AI agents that collaborate with each other simultaneously with isolated workspaces.</p>
+  <img src="./docs/images/tinyagi.png" alt="TinyOraClaw" width="600" />
+  <h1>TinyOraClaw 🦞</h1>
+  <p><strong>TinyAGI + Oracle AI Database sidecar persistence</strong></p>
+  <p>Run multiple teams of AI agents with the current TinyAGI monorepo, while routing the queue and team session history through an Oracle AI Database sidecar.</p>
   <p>
     <img src="https://img.shields.io/badge/stability-experimental-orange.svg" alt="Experimental" />
     <a href="https://opensource.org/licenses/MIT">
@@ -21,6 +21,24 @@
   <video src="https://github.com/user-attachments/assets/c5ef5d3c-d9cf-4a00-b619-c31e4380df2e" width="600" controls></video>
 </div>
 
+## What this fork changes
+
+**TinyOraClaw** is a fork of TinyAGI that replays the Oracle persistence layer on top of the newer upstream monorepo.
+
+What stays upstream-native:
+- `tinyagi` CLI and package layout
+- TinyOffice UI and control-plane routes
+- Team chat rooms and local UI state tables
+
+What changes in this fork:
+- `tinyoraclaw-service/` Python FastAPI sidecar for Oracle operations
+- Oracle-backed queue lifecycle for incoming messages and outgoing responses
+- Oracle-backed team session history snapshots
+- Local FreePDB and OCI/ADB deployment helpers
+- Optional OCI Generative AI proxy in `oci-genai/`
+
+The current implementation is a **hybrid runtime**: the queue and team-session snapshot path use the Oracle sidecar, while some newer upstream-only UI tables remain local to preserve compatibility with TinyOffice.
+
 ## ✨ Features
 
 - ✅ **Multi-agent** - Run multiple isolated AI agents with specialized roles
@@ -32,8 +50,8 @@
 - ✅ **Auth token management** - Store API keys per provider, no separate CLI auth needed
 - ✅ **Parallel processing** - Agents process messages concurrently
 - ✅ **Live TUI dashboard** - Real-time team visualizer and chatroom viewer
-- ✅ **Persistent sessions** - Conversation context maintained across restarts
-- ✅ **SQLite queue** - Atomic transactions, retry logic, dead-letter management
+- ✅ **Persistent sessions** - Team session snapshots stored through the Oracle sidecar
+- ✅ **Oracle-backed queue path** - Incoming messages and outgoing responses can run through Oracle instead of the upstream SQLite queue
 - ✅ **Plugin system** - Extend TinyAGI with custom plugins for message hooks and event listeners
 - ✅ **24/7 operation** - Runs as a background process or Docker container
 
@@ -54,21 +72,31 @@ We are actively looking for contributors. Please reach out.
 
 ### Installation & First Run
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/TinyAGI/tinyagi/main/scripts/install.sh | bash
-```
+If you want the plain upstream experience, you can still install TinyAGI normally.
 
-This downloads and installs the `tinyagi` command globally. Then just run:
+If you want **TinyOraClaw's Oracle-backed mode**, use this local dev flow instead:
 
 ```bash
-tinyagi
+git clone https://github.com/jasperan/tinyoraclaw.git
+cd tinyoraclaw
+cp .env.example .env
+npm install
+npm run build
+
+docker compose up oracle-db tinyoraclaw-service -d
+npm run start
 ```
 
-That's it. TinyAGI auto-creates default settings, starts the daemon, and opens TinyOffice in your browser. No wizard, no configuration needed.
+That gives you:
+- TinyAGI API on `http://localhost:3777`
+- Oracle sidecar on `http://localhost:8100`
+- Oracle Database Free on `localhost:1521/FREEPDB1`
 
-- **Default workspace:** `~/tinyagi-workspace`
-- **Default agent:** `tinyagi` (Anthropic/Opus)
-- **Channels:** none initially — add later with `tinyagi channel setup`
+The upstream CLI is still the control surface, so channel setup stays:
+
+```bash
+npx tinyagi channel setup
+```
 
 <details>
 <summary><b>Development (run from source repo)</b></summary>
@@ -97,16 +125,21 @@ cd tinyagi && npm install && ./scripts/install.sh
 <summary><b>🐳 Docker</b></summary>
 
 ```bash
-docker compose up -d
+# Local Oracle-backed stack
+docker compose up tinyagi oracle-db tinyoraclaw-service -d
 ```
 
-Set your API key in a `.env` file or pass it directly:
+Set your API/provider values in `.env` first. The important switch is:
 
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... docker compose up -d
+TINYORACLAW_SERVICE_URL=http://localhost:8100
 ```
 
-The API runs on `http://localhost:3777`. Data is persisted in a `tinyagi-data` Docker volume.
+That tells the queue/runtime layer to use the Oracle sidecar.
+
+For ADB/OCI use, configure `ORACLE_MODE=adb` plus `ORACLE_DSN` (and wallet values if needed), then start the sidecar path you want explicitly.
+
+The API runs on `http://localhost:3777`. Oracle sidecar data lives in Oracle; local TinyOffice/runtime data still uses the `tinyagi-data` volume where upstream expects it.
 
 </details>
 

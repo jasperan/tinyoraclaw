@@ -134,3 +134,25 @@ export interface ResponseJobData {
     files?: string[];
     metadata?: Record<string, unknown>;
 }
+
+export interface ChainStep {
+    agentId: string;
+    response: string;
+}
+
+export interface Conversation {
+    id: string;
+    channel: string;
+    sender: string;
+    senderId?: string;
+    originalMessage: string;
+    messageId: string;
+    pending: number;
+    responses: ChainStep[];
+    files: Set<string>;
+    totalMessages: number;
+    maxMessages: number;
+    teamContext: { teamId: string; team: TeamConfig };
+    startTime: number;
+    outgoingMentions: Map<string, number>;
+}

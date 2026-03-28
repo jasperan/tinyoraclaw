@@ -57,6 +57,7 @@ export async function streamResponse(response: string, options: {
     originalMessage: string;
     agentId: string;
     transform?: (text: string) => string;
+    existingFiles?: string[];
 }): Promise<void> {
     let finalResponse = response.trim();
 
@@ -64,7 +65,7 @@ export async function streamResponse(response: string, options: {
         finalResponse = options.transform(finalResponse);
     }
 
-    const outboundFilesSet = new Set<string>();
+    const outboundFilesSet = new Set<string>(options.existingFiles || []);
     collectFiles(finalResponse, outboundFilesSet);
     const outboundFiles = Array.from(outboundFilesSet);
     if (outboundFiles.length > 0) {

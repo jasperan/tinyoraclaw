@@ -53,7 +53,7 @@ export function initQueueDb(): void {
             message_id TEXT NOT NULL UNIQUE,
             channel TEXT NOT NULL, sender TEXT NOT NULL, sender_id TEXT,
             message TEXT NOT NULL, agent TEXT,
-            from_agent TEXT,
+            files TEXT, conversation_id TEXT, from_agent TEXT,
             status TEXT NOT NULL DEFAULT 'pending',
             retry_count INTEGER NOT NULL DEFAULT 0, last_error TEXT,
             created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
@@ -92,9 +92,17 @@ export function initQueueDb(): void {
     if (!respCols.some(c => c.name === 'metadata')) {
         db.exec('ALTER TABLE responses ADD COLUMN metadata TEXT');
     }
+
     const msgCols = db.prepare("PRAGMA table_info(messages)").all() as { name: string }[];
-    if (msgCols.some(c => c.name === 'files')) db.exec('ALTER TABLE messages DROP COLUMN files');
-    if (msgCols.some(c => c.name === 'conversation_id')) db.exec('ALTER TABLE messages DROP COLUMN conversation_id');
+    if (!msgCols.some(c => c.name === 'files')) {
+        db.exec('ALTER TABLE messages ADD COLUMN files TEXT');
+    }
+    if (!msgCols.some(c => c.name === 'conversation_id')) {
+        db.exec('ALTER TABLE messages ADD COLUMN conversation_id TEXT');
+    }
+    if (!msgCols.some(c => c.name === 'from_agent')) {
+        db.exec('ALTER TABLE messages ADD COLUMN from_agent TEXT');
+    }
 }
 
 function getDb(): Database.Database {
@@ -135,10 +143,21 @@ export async function enqueueMessage(data: MessageJobData): Promise<number | nul
     const now = Date.now();
     try {
         const r = getDb().prepare(
-            `INSERT INTO messages (message_id,channel,sender,sender_id,message,agent,from_agent,status,created_at,updated_at)
-             VALUES (?,?,?,?,?,?,?,'pending',?,?)`
-        ).run(data.messageId, data.channel, data.sender, data.senderId ?? null, data.message,
-            data.agent ?? null, data.fromAgent ?? null, now, now);
+            `INSERT INTO messages (message_id,channel,sender,sender_id,message,agent,files,conversation_id,from_agent,status,created_at,updated_at)
+             VALUES (?,?,?,?,?,?,?,?,?,'pending',?,?)`
+        ).run(
+            data.messageId,
+            data.channel,
+            data.sender,
+            data.senderId ?? null,
+            data.message,
+            data.agent ?? null,
+            data.files ? JSON.stringify(data.files) : null,
+            data.conversationId ?? null,
+            data.fromAgent ?? null,
+            now,
+            now,
+        );
         queueEvents.emit('message:enqueued', { id: r.lastInsertRowid, agent: data.agent });
         return r.lastInsertRowid as number;
     } catch (err: any) {

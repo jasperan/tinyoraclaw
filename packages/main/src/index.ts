@@ -27,8 +27,20 @@ import { startApiServer } from '@tinyagi/server';
 import { startChannels, stopChannels, startChannel, stopChannel, restartChannel, getChannelStatus } from './channels';
 import { startHeartbeat, stopHeartbeat, getHeartbeatStatus } from './heartbeat';
 import {
-    handleTeamResponse,
     groupChatroomMessages,
+    conversations,
+    MAX_CONVERSATION_MESSAGES,
+    enqueueInternalMessage,
+    completeConversation,
+    withConversationLock,
+    incrementPending,
+    decrementPending,
+    resolveTeamContext,
+    postToChatRoom,
+    extractTeammateMentions,
+    extractChatRoomMessages,
+    loadConversationState,
+    persistConversationState,
 } from '@tinyagi/teams';
 
 // Ensure directories exist
@@ -41,6 +53,12 @@ import {
 // ── Message Processing ──────────────────────────────────────────────────────
 
 async function processMessage(dbMsg: any): Promise<void> {
+    const files: string[] = typeof dbMsg.files === 'string'
+        ? (() => {
+            try { return JSON.parse(dbMsg.files); } catch { return []; }
+        })()
+        : (Array.isArray(dbMsg.files) ? dbMsg.files : []);
+
     const data: MessageJobData = {
         channel: dbMsg.channel,
         sender: dbMsg.sender,
@@ -48,11 +66,13 @@ async function processMessage(dbMsg: any): Promise<void> {
         message: dbMsg.message,
         messageId: dbMsg.message_id,
         agent: dbMsg.agent ?? undefined,
+        files: files.length > 0 ? files : undefined,
+        conversationId: dbMsg.conversation_id ?? undefined,
         fromAgent: dbMsg.from_agent ?? undefined,
     };
 
     const { channel, sender, message: rawMessage, messageId, agent: preRoutedAgent } = data;
-    const isInternal = !!data.fromAgent;
+    const isInternal = !!data.conversationId;
 
     log('INFO', `Processing [${isInternal ? 'internal' : channel}] ${isInternal ? `@${data.fromAgent}→@${preRoutedAgent}` : `from ${sender}`}: ${rawMessage}`);
 
@@ -86,6 +106,22 @@ async function processMessage(dbMsg: any): Promise<void> {
 
     const agent = agents[agentId];
 
+    let teamContext: { teamId: string; team: any } | null = null;
+    if (isInternal && data.conversationId) {
+        let conv = conversations.get(data.conversationId);
+        if (!conv) {
+            conv = await loadConversationState(data.conversationId) || undefined;
+            if (conv) conversations.set(conv.id, conv);
+        }
+        if (conv) {
+            teamContext = conv.teamContext;
+        } else {
+            throw new Error(`Orphaned internal message for missing conversation ${data.conversationId}`);
+        }
+    } else {
+        teamContext = resolveTeamContext(agentId, isTeamRouted, teams);
+    }
+
     // ── Invoke agent ────────────────────────────────────────────────────────
     const agentResetFlag = getAgentResetFlag(agentId, workspacePath);
     const shouldReset = fs.existsSync(agentResetFlag);
@@ -95,6 +131,16 @@ async function processMessage(dbMsg: any): Promise<void> {
 
     ({ text: message } = await runIncomingHooks(message, { channel, sender, messageId, originalMessage: rawMessage }));
 
+    if (isInternal && data.conversationId) {
+        const conv = conversations.get(data.conversationId);
+        if (conv) {
+            const othersPending = conv.pending - 1;
+            if (othersPending > 0) {
+                message += `\n\n------\n\n[${othersPending} other teammate response(s) are still being processed and will be delivered when ready. Do not re-mention teammates who haven't responded yet.]`;
+            }
+        }
+    }
+
     emitEvent('agent:invoke', { agentId, agentName: agent.name, fromAgent: data.fromAgent || null });
     let response: string;
     try {
@@ -102,10 +148,12 @@ async function processMessage(dbMsg: any): Promise<void> {
             log('INFO', `Agent ${agentId}: ${text}`);
             insertAgentMessage({ agentId, role: 'assistant', channel, sender: agentId, messageId, content: text });
             emitEvent('agent:progress', { agentId, agentName: agent.name, text, messageId });
-            sendDirectResponse(text, {
-                channel, sender, senderId: data.senderId,
-                messageId, originalMessage: rawMessage, agentId,
-            });
+            if (!teamContext) {
+                void sendDirectResponse(text, {
+                    channel, sender, senderId: data.senderId,
+                    messageId, originalMessage: rawMessage, agentId,
+                });
+            }
         });
     } catch (error) {
         const provider = agent.provider || 'anthropic';
@@ -114,10 +162,12 @@ async function processMessage(dbMsg: any): Promise<void> {
         response = "Sorry, I encountered an error processing your request. Please check the queue logs.";
         const msgSender = isInternal ? data.fromAgent! : sender;
         insertAgentMessage({ agentId, role: 'assistant', channel, sender: msgSender, messageId, content: response });
-        await sendDirectResponse(response, {
-            channel, sender, senderId: data.senderId,
-            messageId, originalMessage: rawMessage, agentId,
-        });
+        if (!teamContext) {
+            await sendDirectResponse(response, {
+                channel, sender, senderId: data.senderId,
+                messageId, originalMessage: rawMessage, agentId,
+            });
+        }
     }
 
     emitEvent('agent:response', {
@@ -127,12 +177,99 @@ async function processMessage(dbMsg: any): Promise<void> {
         isTeamMessage: isInternal || isTeamRouted,
     });
 
-    // ── Response routing ────────────────────────────────────────────────────
-    // Team orchestration — handles team-routed, internal, and direct messages
-    // to agents that belong to a team.
+    if (!teamContext) {
+        return;
+    }
 
-    await handleTeamResponse({
-        agentId, response, isTeamRouted, data, agents, teams,
+    const chatRoomMsgs = extractChatRoomMessages(response, agentId, teams);
+    if (chatRoomMsgs.length > 0) {
+        log('INFO', `Chat room broadcasts from @${agentId}: ${chatRoomMsgs.map((m) => `#${m.teamId}`).join(', ')}`);
+    }
+    for (const crMsg of chatRoomMsgs) {
+        await postToChatRoom(crMsg.teamId, agentId, crMsg.message, teams[crMsg.teamId].agents, {
+            channel,
+            sender,
+            senderId: data.senderId,
+            messageId,
+        });
+    }
+
+    const conversationId = data.conversationId || messageId;
+
+    await withConversationLock(conversationId, async () => {
+        let conv = conversations.get(conversationId);
+        if (!conv) {
+            conv = await loadConversationState(conversationId) || undefined;
+            if (conv) {
+                conversations.set(conv.id, conv);
+                log('INFO', `Conversation restored from Oracle state: ${conv.id}`);
+            }
+        }
+
+        if (!conv) {
+            conv = {
+                id: conversationId,
+                channel,
+                sender,
+                senderId: data.senderId,
+                originalMessage: rawMessage,
+                messageId,
+                pending: 1,
+                responses: [],
+                files: new Set<string>(),
+                totalMessages: 0,
+                maxMessages: MAX_CONVERSATION_MESSAGES,
+                teamContext,
+                startTime: Date.now(),
+                outgoingMentions: new Map<string, number>(),
+            };
+            conversations.set(conversationId, conv);
+            log('INFO', `Conversation started: ${conversationId} (team: ${teamContext.team.name})`);
+            emitEvent('team_chain_start', {
+                teamId: teamContext.teamId,
+                teamName: teamContext.team.name,
+                agents: teamContext.team.agents,
+                leader: teamContext.team.leader_agent,
+            });
+        }
+
+        conv.responses.push({ agentId, response });
+        conv.totalMessages++;
+
+        if (data.files) {
+            for (const file of data.files) conv.files.add(file);
+        }
+
+        await persistConversationState(conv);
+
+        const teammateMentions = extractTeammateMentions(response, agentId, conv.teamContext.teamId, teams, agents);
+        if (teammateMentions.length > 0 && conv.totalMessages < conv.maxMessages) {
+            incrementPending(conv, teammateMentions.length);
+            conv.outgoingMentions.set(agentId, teammateMentions.length);
+            await persistConversationState(conv);
+            for (const mention of teammateMentions) {
+                log('INFO', `@${agentId} → @${mention.teammateId}`);
+                emitEvent('chain_handoff', { teamId: conv.teamContext.teamId, fromAgent: agentId, toAgent: mention.teammateId });
+
+                const internalMsg = `[Message from teammate @${agentId}]:\n${mention.message}`;
+                await enqueueInternalMessage(conv.id, agentId, mention.teammateId, internalMsg, {
+                    channel: data.channel,
+                    sender: data.sender,
+                    senderId: data.senderId,
+                    messageId: data.messageId,
+                });
+            }
+        } else if (teammateMentions.length > 0) {
+            log('WARN', `Conversation ${conv.id} hit max messages (${conv.maxMessages}) — not enqueuing further mentions`);
+        }
+
+        const shouldComplete = decrementPending(conv);
+        if (shouldComplete) {
+            await completeConversation(conv, agents);
+        } else {
+            await persistConversationState(conv);
+            log('INFO', `Conversation ${conv.id}: ${conv.pending} branch(es) still pending`);
+        }
     });
 }
 
@@ -285,7 +422,7 @@ startScheduler();
 startChannels();
 startHeartbeat();
 
-log('INFO', 'Queue processor started (SQLite)');
+log('INFO', 'Queue processor started (TinyOraClaw hybrid queue: Oracle sidecar + local UI state)');
 logAgentConfig();
 log('INFO', `Agents: ${Object.keys(getAgents(getSettings())).join(', ')}, Teams: ${Object.keys(getTeams(getSettings())).join(', ')}`);
 
