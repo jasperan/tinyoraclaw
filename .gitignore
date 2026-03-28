@@ -9,6 +9,13 @@ dist/
 
 # TinyAGI runtime files
 .tinyagi
+.pi/
+.agents/
+.serena/
+.crush/
+.openhands/
+.claude/
+docs/plans/
 
 .wwebjs_cache
 *.log
@@ -20,6 +27,12 @@ dist/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Python generated files
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
 
 # Editor
 .vscode/

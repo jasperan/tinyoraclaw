@@ -158,11 +158,11 @@ async function sendDirectResponse(
 const agentChains = new Map<string, Promise<void>>();
 
 async function processQueue(): Promise<void> {
-    const pendingAgents = getPendingAgents();
+    const pendingAgents = await getPendingAgents();
     if (pendingAgents.length === 0) return;
 
     for (const agentId of pendingAgents) {
-        const messages = claimAllPendingMessages(agentId);
+        const messages = await claimAllPendingMessages(agentId);
         if (messages.length === 0) continue;
 
         const currentChain = agentChains.get(agentId) || Promise.resolve();
@@ -173,15 +173,15 @@ async function processQueue(): Promise<void> {
                 const msg = groupedMessages[i];
                 const ids = messageIds[i];
                 try {
-                    for (const id of ids) markProcessing(id);
+                    for (const id of ids) await markProcessing(id);
                     await processMessage(msg);
                     for (const id of ids) {
-                        completeMessage(id);
+                        await completeMessage(id);
                     }
                 } catch (error) {
                     log('ERROR', `Failed to process message ${msg.id}: ${(error as Error).message}`);
                     for (const id of ids) {
-                        failMessage(id, (error as Error).message);
+                        await failMessage(id, (error as Error).message);
                     }
                 }
             }
@@ -215,6 +215,14 @@ function logAgentConfig(): void {
     }
 }
 
+function runLogged(label: string, task: () => Promise<unknown>): void {
+    void Promise.resolve()
+        .then(task)
+        .catch((error) => {
+            log('ERROR', `${label} failed: ${error instanceof Error ? error.message : String(error)}`);
+        });
+}
+
 // ─── Start ──────────────────────────────────────────────────────────────────
 
 initQueueDb();
@@ -224,10 +232,12 @@ fs.writeFileSync(path.join(TINYAGI_HOME, 'tinyagi.pid'), String(process.pid));
 
 // Recover any messages left in 'processing' from a previous run — they're
 // guaranteed stale because the process just restarted.
-const startupRecovered = recoverStaleMessages(0);
-if (startupRecovered > 0) {
-    log('INFO', `Startup: recovered ${startupRecovered} in-flight message(s) from previous run`);
-}
+runLogged('Startup stale recovery', async () => {
+    const startupRecovered = await recoverStaleMessages(0);
+    if (startupRecovered > 0) {
+        log('INFO', `Startup: recovered ${startupRecovered} in-flight message(s) from previous run`);
+    }
+});
 
 const apiServer = startApiServer({
     startChannel,
@@ -242,7 +252,9 @@ const apiServer = startApiServer({
 });
 
 // Event-driven: process queue when a new message arrives
-queueEvents.on('message:enqueued', () => processQueue());
+queueEvents.on('message:enqueued', () => {
+    runLogged('Queue processing (message:enqueued)', () => processQueue());
+});
 
 // When user manually kills an agent session, clear its promise chain
 queueEvents.on('agent:killed', ({ agentId }: { agentId: string }) => {
@@ -251,12 +263,14 @@ queueEvents.on('agent:killed', ({ agentId }: { agentId: string }) => {
 });
 
 // Also poll periodically in case events are missed
-const pollInterval = setInterval(() => processQueue(), 5000);
+const pollInterval = setInterval(() => {
+    runLogged('Queue polling', () => processQueue());
+}, 5000);
 
 // Periodic maintenance (prune old completed/acked records)
 const maintenanceInterval = setInterval(() => {
-    pruneAckedResponses();
-    pruneCompletedMessages();
+    runLogged('Prune acked responses', () => pruneAckedResponses());
+    runLogged('Prune completed messages', () => pruneCompletedMessages());
 }, 60 * 1000);
 
 // Load plugins

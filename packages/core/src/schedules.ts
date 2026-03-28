@@ -30,7 +30,7 @@ export function saveSchedules(schedules: Schedule[]): void {
 
 // ── Cron job management ──────────────────────────────────────────────────────
 
-function fireSchedule(schedule: Schedule): void {
+async function fireSchedule(schedule: Schedule): Promise<void> {
     const ts = Date.now();
     const msgId = `${schedule.label}_${ts}_${Math.random().toString(36).slice(2, 6)}`;
 
@@ -44,7 +44,7 @@ function fireSchedule(schedule: Schedule): void {
     };
 
     try {
-        const rowId = enqueueMessage(data);
+        const rowId = await enqueueMessage(data);
         if (rowId) {
             // Persist user-side message so it appears in agent_messages (same as API route)
             insertAgentMessage({
@@ -77,7 +77,7 @@ function startJob(schedule: Schedule): void {
                 return;
             }
             const job = new Cron(runDate, () => {
-                fireSchedule(schedule);
+                void fireSchedule(schedule);
                 // Auto-disable after firing
                 const all = getSchedules();
                 const idx = all.findIndex(s => s.id === schedule.id);
@@ -91,7 +91,7 @@ function startJob(schedule: Schedule): void {
             jobs.set(schedule.id, job);
             log('INFO', `[Schedule] Scheduled one-time '${schedule.label}' at ${schedule.runAt}`);
         } else {
-            const job = new Cron(schedule.cron, () => fireSchedule(schedule));
+            const job = new Cron(schedule.cron, () => { void fireSchedule(schedule); });
             jobs.set(schedule.id, job);
             log('INFO', `[Schedule] Started cron job '${schedule.label}' (${schedule.cron})`);
         }

@@ -32,7 +32,7 @@ app.post('/api/message', async (c) => {
         resolvedAgent = routing.agentId;
     }
 
-    const rowId = enqueueMessage({
+    const rowId = await enqueueMessage({
         channel: resolvedChannel,
         sender: resolvedSender,
         senderId: senderId || undefined,

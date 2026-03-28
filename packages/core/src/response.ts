@@ -76,7 +76,7 @@ export async function streamResponse(response: string, options: {
     });
     const { message: responseMessage, files: allFiles } = handleLongResponse(hookedResponse, outboundFiles);
 
-    enqueueResponse({
+    await enqueueResponse({
         channel: options.channel,
         sender: options.sender,
         senderId: options.senderId,

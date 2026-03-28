@@ -118,6 +118,8 @@ export interface MessageJobData {
     message: string;
     messageId: string;
     agent?: string;
+    files?: string[];
+    conversationId?: string;
     fromAgent?: string;
 }
 

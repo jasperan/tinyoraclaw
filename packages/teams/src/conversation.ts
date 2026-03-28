@@ -8,18 +8,18 @@ import { convertTagsToReadable, extractTeammateMentions, extractChatRoomMessages
 
 // ── Team Chat Room ───────────────────────────────────────────────────────────
 
-export function postToChatRoom(
+export async function postToChatRoom(
     teamId: string,
     fromAgent: string,
     message: string,
     teamAgents: string[],
     originalData: { channel: string; sender: string; senderId?: string | null; messageId: string }
-): number {
+): Promise<number> {
     const chatMsg = `[Chat room #${teamId} — @${fromAgent}]:\n${message}`;
     const id = insertChatMessage(teamId, fromAgent, message);
     for (const agentId of teamAgents) {
         if (agentId === fromAgent) continue;
-        enqueueMessage({
+        await enqueueMessage({
             channel: 'chatroom',
             sender: originalData.sender,
             senderId: originalData.senderId ?? undefined,
@@ -74,7 +74,7 @@ export async function handleTeamResponse(params: {
         log('INFO', `Chat room broadcasts from @${agentId}: ${chatRoomMsgs.map(m => `#${m.teamId}`).join(', ')}`);
     }
     for (const crMsg of chatRoomMsgs) {
-        postToChatRoom(crMsg.teamId, agentId, crMsg.message, teams[crMsg.teamId].agents, {
+        await postToChatRoom(crMsg.teamId, agentId, crMsg.message, teams[crMsg.teamId].agents, {
             channel, sender, senderId: data.senderId, messageId,
         });
     }
@@ -93,7 +93,7 @@ export async function handleTeamResponse(params: {
             emitEvent('agent:mention', { teamId: teamContext.teamId, fromAgent: agentId, toAgent: mention.teammateId });
 
             const internalMsg = `[Message from teammate @${agentId}]:\n${mention.message}`;
-            enqueueMessage({
+            await enqueueMessage({
                 channel,
                 sender,
                 senderId: data.senderId ?? undefined,

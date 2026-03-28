@@ -31,7 +31,7 @@ app.post('/api/chatroom/:teamId', async (c) => {
         return c.json({ error: 'message is required' }, 400);
     }
 
-    const id = postToChatRoom(teamId, 'user', body.message.trim(), team.agents, {
+    const id = await postToChatRoom(teamId, 'user', body.message.trim(), team.agents, {
         channel: 'chatroom',
         sender: 'user',
         messageId: genId('chatroom'),

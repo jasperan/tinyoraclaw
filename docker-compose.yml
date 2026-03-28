@@ -2,7 +2,7 @@ services:
   tinyagi:
     build: .
     ports:
-      - "3777:3777"
+      - "${TINYAGI_API_PORT:-3777}:3777"
     volumes:
       - tinyagi-data:/root
     environment:
@@ -10,7 +10,88 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TINYORACLAW_SERVICE_URL=http://tinyoraclaw-service:8100
+      - TINYORACLAW_SERVICE_TOKEN=${TINYORACLAW_SERVICE_TOKEN:-}
+    restart: unless-stopped
+
+  oracle-db:
+    image: container-registry.oracle.com/database/free:latest-lite
+    container_name: tinyoraclaw-oracle
+    environment:
+      - ORACLE_PWD=${ORACLE_PASSWORD:-TinyOraClaw2026}
+      - ORACLE_CHARACTERSET=AL32UTF8
+    ports:
+      - "${ORACLE_HOST_PORT:-1521}:1521"
+    volumes:
+      - oracle-data:/opt/oracle/oradata
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "sqlplus",
+          "-L",
+          "sys/${ORACLE_PASSWORD:-TinyOraClaw2026}@//localhost:1521/FREEPDB1 as sysdba",
+          "@/dev/null"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 120s
+    restart: unless-stopped
+
+  tinyoraclaw-service:
+    build:
+      context: ./tinyoraclaw-service
+      dockerfile: Dockerfile
+    container_name: tinyoraclaw-service
+    ports:
+      - "${TINYORACLAW_SERVICE_PORT:-8100}:8100"
+    environment:
+      - ORACLE_MODE=freepdb
+      - ORACLE_USER=${ORACLE_USER:-tinyoraclaw}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD:-TinyOraClaw2026}
+      - ORACLE_HOST=oracle-db
+      - ORACLE_PORT=${ORACLE_PORT:-1521}
+      - ORACLE_SERVICE=${ORACLE_SERVICE:-FREEPDB1}
+      - ORACLE_DSN=${ORACLE_DSN:-}
+      - ORACLE_WALLET_PATH=${ORACLE_WALLET_PATH:-}
+      - ORACLE_WALLET_PASSWORD=${ORACLE_WALLET_PASSWORD:-}
+      - ORACLE_POOL_MIN=${ORACLE_POOL_MIN:-2}
+      - ORACLE_POOL_MAX=${ORACLE_POOL_MAX:-10}
+      - TINYORACLAW_SERVICE_PORT=8100
+      - TINYORACLAW_SERVICE_TOKEN=${TINYORACLAW_SERVICE_TOKEN:-}
+      - AUTO_INIT=true
+    depends_on:
+      oracle-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  tinyoraclaw-service-adb:
+    build:
+      context: ./tinyoraclaw-service
+      dockerfile: Dockerfile
+    container_name: tinyoraclaw-service-adb
+    profiles: ["adb"]
+    ports:
+      - "${TINYORACLAW_SERVICE_PORT:-8100}:8100"
+    environment:
+      - ORACLE_MODE=adb
+      - ORACLE_USER=${ORACLE_USER:-ADMIN}
+      - ORACLE_PASSWORD=${ORACLE_PASSWORD:-}
+      - ORACLE_DSN=${ORACLE_DSN:-}
+      - ORACLE_WALLET_PATH=${ORACLE_WALLET_PATH:-}
+      - ORACLE_WALLET_PASSWORD=${ORACLE_WALLET_PASSWORD:-}
+      - ORACLE_POOL_MIN=${ORACLE_POOL_MIN:-2}
+      - ORACLE_POOL_MAX=${ORACLE_POOL_MAX:-10}
+      - TINYORACLAW_SERVICE_PORT=8100
+      - TINYORACLAW_SERVICE_TOKEN=${TINYORACLAW_SERVICE_TOKEN:-}
+      - AUTO_INIT=true
+    networks:
+      default:
+        aliases:
+          - tinyoraclaw-service
     restart: unless-stopped
 
 volumes:
   tinyagi-data:
+  oracle-data:
