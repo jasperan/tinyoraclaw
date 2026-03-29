@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TinyOraClaw - Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:wght@400;600&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0f0f0f;
+  --violet: #8b5cf6;
+  --rose: #f472b6;
+  --gold: #fbbf24;
+  --green: #34d399;
+  --text: #e8e8e8;
+  --muted: #6b7280;
+  --surface: rgba(255,255,255,0.04);
+  --slide-count: 24;
+}
+
+html {
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  overflow-x: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal, .reveal.visible { transition: none !important; animation: none !important; }
+}
+
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-weight: 300;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+/* ── Slides ── */
+.slide {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  scroll-snap-align: start;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(1.5rem, 4vw, 4rem);
+  text-align: center;
+}
+
+.slide-inner {
+  max-width: 1100px;
+  width: 100%;
+  position: relative;
+  z-index: 2;
+}
+
+/* ── Background decorations ── */
+.slide::before, .slide::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.12;
+  z-index: 0;
+  pointer-events: none;
+}
+.slide::before {
+  width: clamp(200px, 40vw, 500px);
+  height: clamp(200px, 40vw, 500px);
+  background: var(--violet);
+  top: -10%;
+  right: -5%;
+}
+.slide::after {
+  width: clamp(150px, 30vw, 400px);
+  height: clamp(150px, 30vw, 400px);
+  background: var(--rose);
+  bottom: -8%;
+  left: -5%;
+}
+
+/* ── Typography ── */
+h1 {
+  font-family: 'Cormorant', serif;
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  line-height: 1.1;
+  margin-bottom: clamp(0.5rem, 1.5vw, 1.5rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-family: 'Cormorant', serif;
+  font-weight: 600;
+  font-size: clamp(1.5rem, 3.5vw, 3rem);
+  line-height: 1.15;
+  margin-bottom: clamp(0.4rem, 1.2vw, 1.2rem);
+}
+
+h3 {
+  font-family: 'Cormorant', serif;
+  font-weight: 400;
+  font-size: clamp(1.2rem, 2.5vw, 2rem);
+  line-height: 1.2;
+  margin-bottom: clamp(0.3rem, 1vw, 1rem);
+  color: var(--violet);
+}
+
+p, li {
+  font-size: clamp(0.8rem, 1.6vw, 1.15rem);
+  line-height: 1.55;
+  color: rgba(232,232,232,0.85);
+}
+
+.subtitle {
+  font-size: clamp(0.9rem, 1.8vw, 1.3rem);
+  color: var(--muted);
+  font-weight: 300;
+}
+
+.tagline {
+  font-family: 'Cormorant', serif;
+  font-weight: 400;
+  font-size: clamp(1rem, 2.2vw, 1.6rem);
+  color: var(--rose);
+  font-style: italic;
+}
+
+/* ── Accent elements ── */
+.accent-line {
+  width: clamp(40px, 8vw, 80px);
+  height: 2px;
+  background: linear-gradient(90deg, var(--violet), var(--rose));
+  margin: clamp(0.5rem, 1.5vw, 1.5rem) auto;
+  border-radius: 1px;
+}
+
+.accent-violet { color: var(--violet); }
+.accent-rose { color: var(--rose); }
+.accent-gold { color: var(--gold); }
+.accent-green { color: var(--green); }
+
+/* ── Cards / Grids ── */
+.card-grid {
+  display: grid;
+  gap: clamp(0.5rem, 1.5vw, 1.2rem);
+  margin-top: clamp(0.5rem, 1.5vw, 1.5rem);
+  text-align: left;
+}
+.card-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.card-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.card-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid rgba(139,92,246,0.15);
+  border-radius: clamp(6px, 1vw, 12px);
+  padding: clamp(0.6rem, 1.5vw, 1.4rem);
+}
+.card h3 {
+  font-size: clamp(0.9rem, 1.8vw, 1.3rem);
+  margin-bottom: clamp(0.2rem, 0.5vw, 0.5rem);
+}
+.card p, .card li {
+  font-size: clamp(0.7rem, 1.3vw, 0.95rem);
+}
+
+/* ── Lists ── */
+ul { list-style: none; padding: 0; }
+ul li { position: relative; padding-left: clamp(1rem, 2vw, 1.5rem); margin-bottom: clamp(0.2rem, 0.5vw, 0.5rem); }
+ul li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: clamp(0.35rem, 0.7vw, 0.55rem);
+  width: clamp(4px, 0.6vw, 6px);
+  height: clamp(4px, 0.6vw, 6px);
+  border-radius: 50%;
+  background: var(--violet);
+}
+
+/* ── Code blocks ── */
+.code-block {
+  background: rgba(0,0,0,0.5);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: clamp(4px, 0.8vw, 8px);
+  padding: clamp(0.5rem, 1.2vw, 1.2rem);
+  text-align: left;
+  font-family: 'IBM Plex Mono', 'Fira Code', monospace;
+  font-size: clamp(0.6rem, 1.1vw, 0.85rem);
+  line-height: 1.6;
+  overflow: hidden;
+  margin-top: clamp(0.4rem, 1vw, 1rem);
+}
+.code-block .keyword { color: var(--violet); }
+.code-block .type { color: var(--rose); }
+.code-block .string { color: var(--green); }
+.code-block .comment { color: var(--muted); }
+.code-block .func { color: var(--gold); }
+
+/* ── Section dividers ── */
+.section-slide {
+  background: linear-gradient(135deg, rgba(139,92,246,0.08), rgba(244,114,182,0.06));
+}
+.section-number {
+  font-family: 'Cormorant', serif;
+  font-weight: 600;
+  font-size: clamp(4rem, 12vw, 10rem);
+  line-height: 1;
+  background: linear-gradient(135deg, var(--violet), var(--rose));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  opacity: 0.3;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+.section-slide .slide-inner { z-index: 2; }
+
+/* ── Tables ── */
+.mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: clamp(0.4rem, 1vw, 1rem);
+  font-size: clamp(0.65rem, 1.2vw, 0.9rem);
+}
+.mini-table th, .mini-table td {
+  padding: clamp(0.25rem, 0.6vw, 0.5rem) clamp(0.4rem, 1vw, 0.8rem);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  text-align: left;
+}
+.mini-table th {
+  color: var(--violet);
+  font-weight: 400;
+  font-size: clamp(0.6rem, 1.1vw, 0.8rem);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.mini-table td { color: rgba(232,232,232,0.75); }
+
+/* ── Diagram ── */
+.diagram-box {
+  background: var(--surface);
+  border: 1px solid rgba(139,92,246,0.2);
+  border-radius: clamp(6px, 1vw, 12px);
+  padding: clamp(0.5rem, 1.2vw, 1rem);
+  text-align: center;
+  font-size: clamp(0.7rem, 1.2vw, 0.9rem);
+}
+.diagram-box.violet-border { border-color: rgba(139,92,246,0.4); }
+.diagram-box.rose-border { border-color: rgba(244,114,182,0.4); }
+.diagram-box.gold-border { border-color: rgba(251,191,36,0.4); }
+
+.diagram-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  padding: clamp(0.2rem, 0.5vw, 0.3rem) 0;
+}
+
+/* ── Slide number ── */
+.slide-number {
+  position: absolute;
+  bottom: clamp(0.5rem, 1.5vw, 1.5rem);
+  right: clamp(0.8rem, 2vw, 2rem);
+  font-size: clamp(0.55rem, 1vw, 0.75rem);
+  color: var(--muted);
+  z-index: 5;
+}
+
+/* ── Reveal animation ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Progress bar ── */
+#progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--violet), var(--rose), var(--gold));
+  z-index: 1000;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+/* ── Nav dots ── */
+#nav-dots {
+  position: fixed;
+  right: clamp(0.5rem, 1.5vw, 1.2rem);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3px, 0.5vw, 6px);
+  z-index: 1000;
+}
+.nav-dot {
+  width: clamp(5px, 0.7vw, 8px);
+  height: clamp(5px, 0.7vw, 8px);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.3s ease;
+  border: none;
+  padding: 0;
+}
+.nav-dot.active {
+  background: var(--violet);
+  transform: scale(1.4);
+}
+.nav-dot:hover { background: rgba(139,92,246,0.6); }
+
+/* ── Badge ── */
+.badge {
+  display: inline-block;
+  padding: clamp(0.15rem, 0.4vw, 0.25rem) clamp(0.4rem, 1vw, 0.7rem);
+  border-radius: 999px;
+  font-size: clamp(0.55rem, 1vw, 0.75rem);
+  font-weight: 400;
+  border: 1px solid;
+}
+.badge-violet { border-color: var(--violet); color: var(--violet); }
+.badge-rose { border-color: var(--rose); color: var(--rose); }
+.badge-gold { border-color: var(--gold); color: var(--gold); }
+.badge-green { border-color: var(--green); color: var(--green); }
+
+/* ── Stat ── */
+.stat-row {
+  display: flex;
+  justify-content: center;
+  gap: clamp(1rem, 3vw, 3rem);
+  margin: clamp(0.5rem, 1.5vw, 1.5rem) 0;
+  flex-wrap: wrap;
+}
+.stat-item { text-align: center; }
+.stat-value {
+  font-family: 'Cormorant', serif;
+  font-weight: 600;
+  font-size: clamp(1.5rem, 4vw, 3rem);
+  background: linear-gradient(135deg, var(--violet), var(--rose));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.stat-label {
+  font-size: clamp(0.6rem, 1.1vw, 0.8rem);
+  color: var(--muted);
+}
+
+/* ── Two-col layout ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(0.8rem, 2vw, 2rem);
+  text-align: left;
+  margin-top: clamp(0.5rem, 1.2vw, 1rem);
+}
+
+/* ── Responsive ── */
+@media (max-height: 700px) {
+  .slide { padding: clamp(1rem, 3vw, 2.5rem); }
+  h1 { font-size: clamp(1.6rem, 4vw, 3rem); }
+  h2 { font-size: clamp(1.2rem, 3vw, 2.2rem); }
+  .card { padding: clamp(0.4rem, 1vw, 0.8rem); }
+  .stat-value { font-size: clamp(1.2rem, 3vw, 2rem); }
+}
+
+@media (max-height: 600px) {
+  h1 { font-size: clamp(1.3rem, 3.5vw, 2.5rem); }
+  h2 { font-size: clamp(1rem, 2.5vw, 1.8rem); }
+  p, li { font-size: clamp(0.65rem, 1.3vw, 0.9rem); }
+  .card-grid { gap: clamp(0.3rem, 0.8vw, 0.6rem); }
+  .code-block { padding: clamp(0.3rem, 0.8vw, 0.6rem); font-size: clamp(0.55rem, 0.9vw, 0.7rem); }
+  .accent-line { margin: clamp(0.3rem, 0.8vw, 0.6rem) auto; }
+}
+
+@media (max-height: 500px) {
+  h1 { font-size: clamp(1.1rem, 3vw, 2rem); }
+  h2 { font-size: clamp(0.9rem, 2vw, 1.5rem); }
+  p, li { font-size: clamp(0.55rem, 1.1vw, 0.8rem); }
+  .slide { padding: clamp(0.6rem, 2vw, 1.5rem); }
+}
+
+@media (max-width: 768px) {
+  .card-grid.cols-3, .card-grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+  .two-col { grid-template-columns: 1fr; gap: clamp(0.5rem, 1.5vw, 1rem); }
+  #nav-dots { display: none; }
+}
+
+@media (max-width: 480px) {
+  .card-grid.cols-2, .card-grid.cols-3, .card-grid.cols-4 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="nav-dots"></div>
+
+<!-- ═══════════════ SLIDE 1: TITLE ═══════════════ -->
+<div class="slide" data-title="Title">
+  <div class="slide-inner reveal">
+    <p class="subtitle" style="margin-bottom: clamp(0.3rem, 0.8vw, 0.8rem);">Introducing</p>
+    <h1>Tiny<span class="accent-violet">Ora</span>Claw</h1>
+    <div class="accent-line"></div>
+    <p class="tagline">Multi-agent AI on Oracle. TypeScript + Python.</p>
+    <div class="stat-row" style="margin-top: clamp(1rem, 2.5vw, 2.5rem);">
+      <div class="stat-item"><div class="stat-value">4,924</div><div class="stat-label">Lines of Code</div></div>
+      <div class="stat-item"><div class="stat-value">2</div><div class="stat-label">Runtimes</div></div>
+      <div class="stat-item"><div class="stat-value">3</div><div class="stat-label">Channels</div></div>
+      <div class="stat-item"><div class="stat-value">7</div><div class="stat-label">Oracle Tables</div></div>
+    </div>
+    <p style="margin-top: clamp(0.8rem, 1.5vw, 1.5rem);"><span class="badge badge-violet">v0.1.0</span> <span class="badge badge-rose">MIT / Apache-2.0</span></p>
+  </div>
+  <span class="slide-number">1 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 2: THE PITCH ═══════════════ -->
+<div class="slide" data-title="The Pitch">
+  <div class="slide-inner reveal">
+    <h2>The Pitch</h2>
+    <div class="accent-line"></div>
+    <p style="max-width: 700px; margin: 0 auto clamp(0.5rem, 1.5vw, 1.5rem);">A two-process personal AI assistant that runs multi-agent teams across Discord, Telegram, and WhatsApp, with a modern web dashboard and Oracle persistence.</p>
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3 class="accent-violet">Two Processes</h3>
+        <p>TypeScript main + Python FastAPI sidecar. Each doing what it does best.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">3 Channels</h3>
+        <p>Discord, Telegram, WhatsApp. Media support across all three.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">Multi-Agent Teams</h3>
+        <p>Leader agents delegate to teammates. Parallel processing with conversation locking.</p>
+      </div>
+    </div>
+    <div class="card-grid cols-2" style="margin-top: clamp(0.4rem, 1vw, 0.8rem);">
+      <div class="card">
+        <h3 class="accent-green">Web Dashboard</h3>
+        <p>React 19 + Next.js 16. Live SSE, Kanban tasks, agent CRUD, real-time logs.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-violet">Oracle Persistence</h3>
+        <p>7 core tables. In-database ONNX embeddings. Vector similarity search. ACID guarantees.</p>
+      </div>
+    </div>
+  </div>
+  <span class="slide-number">2 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 3: WHY ORACLE ═══════════════ -->
+<div class="slide" data-title="Why Oracle">
+  <div class="slide-inner reveal">
+    <h2>Why <span class="accent-violet">Oracle</span> AI Database?</h2>
+    <div class="accent-line"></div>
+    <div class="two-col">
+      <div>
+        <h3>What You Get</h3>
+        <ul>
+          <li><strong class="accent-rose">In-database ONNX embeddings</strong> (no external API calls)</li>
+          <li><strong class="accent-gold">VECTOR_DISTANCE()</strong> with COSINE similarity</li>
+          <li><strong class="accent-green">ACID transactions</strong> across all 7 tables</li>
+          <li><strong class="accent-violet">Enterprise-grade</strong> security, backup, HA</li>
+          <li>JSON, CLOB, VECTOR column types natively</li>
+        </ul>
+      </div>
+      <div>
+        <h3>vs. SQLite (TinyClaw)</h3>
+        <ul>
+          <li>SQLite WAL: single-writer, no concurrent writes</li>
+          <li>No native vector type or embedding generation</li>
+          <li>No connection pooling</li>
+          <li>No row-level locking (SELECT FOR UPDATE)</li>
+          <li>No built-in replication or HA</li>
+        </ul>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top: clamp(0.5rem, 1vw, 1rem);">
+      <span class="comment">-- Embeddings generated inside the database</span><br>
+      <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> <span class="type">TINY_MEMORIES</span><br>
+      <span class="keyword">ORDER BY</span> <span class="func">VECTOR_DISTANCE</span>(embedding, <span class="func">VECTOR_EMBEDDING</span>(<br>
+      &nbsp;&nbsp;<span class="type">ALL_MINILM_L12_V2</span> <span class="keyword">USING</span> <span class="string">'search query'</span>), <span class="type">COSINE</span>)<br>
+      <span class="keyword">FETCH FIRST</span> <span class="string">5</span> <span class="keyword">ROWS ONLY</span>;
+    </div>
+  </div>
+  <span class="slide-number">3 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 4: ARCHITECTURE ═══════════════ -->
+<div class="slide" data-title="Architecture">
+  <div class="slide-inner reveal">
+    <h2>Architecture</h2>
+    <div class="accent-line"></div>
+    <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: clamp(0.4rem, 1vw, 1rem); align-items: start; margin-top: clamp(0.5rem, 1vw, 1rem);">
+      <div class="diagram-box violet-border">
+        <h3 style="font-size: clamp(0.85rem, 1.5vw, 1.1rem);">TypeScript Main</h3>
+        <p style="font-size: clamp(0.6rem, 1vw, 0.8rem); color: var(--muted);">Node.js 22</p>
+        <div style="margin-top: clamp(0.3rem, 0.6vw, 0.5rem); text-align: left;">
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">Queue Processor (427 LOC)</p>
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">Hono API :3777</p>
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">Channel Clients</p>
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">SSE Stream</p>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: clamp(1rem, 3vw, 3rem);">
+        <span style="color: var(--violet); font-size: clamp(0.9rem, 1.5vw, 1.2rem);">&#8596;</span>
+        <span style="font-size: clamp(0.5rem, 0.9vw, 0.7rem); color: var(--muted);">HTTP</span>
+      </div>
+      <div class="diagram-box rose-border">
+        <h3 style="font-size: clamp(0.85rem, 1.5vw, 1.1rem); color: var(--rose);">Python Sidecar</h3>
+        <p style="font-size: clamp(0.6rem, 1vw, 0.8rem); color: var(--muted);">FastAPI :8100</p>
+        <div style="margin-top: clamp(0.3rem, 0.6vw, 0.5rem); text-align: left;">
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">Oracle Driver (oracledb)</p>
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">Vector Embeddings</p>
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">Queue Management</p>
+          <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">Memory / Sessions</p>
+        </div>
+      </div>
+    </div>
+    <div class="diagram-arrow">&#8595;</div>
+    <div class="diagram-box gold-border" style="max-width: 500px; margin: 0 auto;">
+      <h3 style="font-size: clamp(0.85rem, 1.5vw, 1.1rem); color: var(--gold);">Oracle AI Database</h3>
+      <p style="font-size: clamp(0.6rem, 1vw, 0.78rem);">7 Core Tables &middot; VECTOR Index &middot; ONNX Models &middot; Connection Pool</p>
+    </div>
+  </div>
+  <span class="slide-number">4 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 5: SECTION - TypeScript ═══════════════ -->
+<div class="slide section-slide" data-title="TypeScript Layer">
+  <span class="section-number">I</span>
+  <div class="slide-inner reveal">
+    <h3 class="accent-violet" style="font-size: clamp(0.8rem, 1.5vw, 1rem); text-transform: uppercase; letter-spacing: 0.1em;">Section</h3>
+    <h1>TypeScript Layer</h1>
+    <div class="accent-line"></div>
+    <p class="subtitle">Node.js 22. Queue processor, Hono API, channel clients.</p>
+  </div>
+  <span class="slide-number">5 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 6: QUEUE PROCESSOR ═══════════════ -->
+<div class="slide" data-title="Queue Processor">
+  <div class="slide-inner reveal">
+    <h2>Queue Processor</h2>
+    <p class="subtitle">The entry point. 427 lines of orchestration.</p>
+    <div class="accent-line"></div>
+    <div class="two-col">
+      <div>
+        <ul>
+          <li>Main message loop: poll, claim, process, complete</li>
+          <li>Sidecar health check + initialization</li>
+          <li>Channel routing (Discord, Telegram, WhatsApp)</li>
+          <li>Team orchestration dispatch</li>
+          <li>Error recovery with retry semantics</li>
+        </ul>
+      </div>
+      <div>
+        <div class="code-block">
+          <span class="comment">// Core loop</span><br>
+          <span class="keyword">while</span> (<span class="keyword">true</span>) {<br>
+          &nbsp;&nbsp;<span class="keyword">const</span> msg = <span class="keyword">await</span> <span class="func">claimNext</span>();<br>
+          &nbsp;&nbsp;<span class="keyword">if</span> (!msg) { <span class="keyword">await</span> <span class="func">sleep</span>(<span class="string">1000</span>); <span class="keyword">continue</span>; }<br>
+          &nbsp;&nbsp;<span class="keyword">const</span> agent = <span class="func">resolveAgent</span>(msg);<br>
+          &nbsp;&nbsp;<span class="keyword">const</span> resp = <span class="keyword">await</span> <span class="func">process</span>(agent, msg);<br>
+          &nbsp;&nbsp;<span class="keyword">await</span> <span class="func">complete</span>(msg.id, resp);<br>
+          &nbsp;&nbsp;<span class="keyword">await</span> <span class="func">routeToChannel</span>(msg, resp);<br>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+  <span class="slide-number">6 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 7: HONO API ═══════════════ -->
+<div class="slide" data-title="Hono API">
+  <div class="slide-inner reveal">
+    <h2>Hono API <span class="accent-muted" style="font-size: clamp(0.8rem, 1.5vw, 1rem); color: var(--muted);">:3777</span></h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3 class="accent-violet">/agents</h3>
+        <p>CRUD for agent definitions. Name, model, system prompt, tools.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">/teams</h3>
+        <p>Team composition. Leader agent, teammate list, routing rules.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">/queue</h3>
+        <p>Message queue status. Pending, processing, completed counts.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-green">/tasks</h3>
+        <p>Task management. Create, assign, update status, Kanban states.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-violet">/chats</h3>
+        <p>Conversation history. Session-scoped message threads.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">/settings</h3>
+        <p>Runtime configuration. LLM provider, model, channel toggles.</p>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top: clamp(0.5rem, 1vw, 1rem);">
+      <span class="comment">// SSE real-time stream</span><br>
+      app.<span class="func">get</span>(<span class="string">'/events'</span>, (c) => <span class="func">streamSSE</span>(c, <span class="keyword">async</span> (stream) => {<br>
+      &nbsp;&nbsp;<span class="keyword">for await</span> (<span class="keyword">const</span> event <span class="keyword">of</span> eventBus) {<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">await</span> stream.<span class="func">writeSSE</span>({ <span class="type">data</span>: <span class="type">JSON</span>.<span class="func">stringify</span>(event) });<br>
+      &nbsp;&nbsp;}<br>
+      }));
+    </div>
+  </div>
+  <span class="slide-number">7 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 8: SECTION - Python ═══════════════ -->
+<div class="slide section-slide" data-title="Python Sidecar">
+  <span class="section-number">II</span>
+  <div class="slide-inner reveal">
+    <h3 class="accent-rose" style="font-size: clamp(0.8rem, 1.5vw, 1rem); text-transform: uppercase; letter-spacing: 0.1em;">Section</h3>
+    <h1>Python Sidecar</h1>
+    <div class="accent-line"></div>
+    <p class="subtitle">FastAPI on port 8100. Oracle driver, embeddings, queue.</p>
+  </div>
+  <span class="slide-number">8 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 9: FASTAPI SERVICE ═══════════════ -->
+<div class="slide" data-title="FastAPI Service">
+  <div class="slide-inner reveal">
+    <h2>FastAPI Service</h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-2">
+      <div class="card">
+        <h3 class="accent-violet">Connection Pooling</h3>
+        <p>Oracle thick-mode driver with session pool. Configurable min/max/increment. Health checks on startup.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">Vector Embeddings</h3>
+        <p>In-database ONNX model (ALL_MINILM_L12_V2). Generate + search in a single SQL call.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">Queue Ops</h3>
+        <p>Enqueue, claim (SELECT FOR UPDATE SKIP LOCKED), complete, fail. Atomic state transitions.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-green">Memory + Sessions</h3>
+        <p>Remember/recall with vector similarity. Session CLOB serialization. Transcript append.</p>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top: clamp(0.5rem, 1vw, 1rem);">
+      <span class="keyword">@app</span>.<span class="func">post</span>(<span class="string">"/queue/enqueue"</span>)<br>
+      <span class="keyword">async def</span> <span class="func">enqueue</span>(req: <span class="type">EnqueueRequest</span>) -> <span class="type">QueueResponse</span>:<br>
+      &nbsp;&nbsp;<span class="keyword">async with</span> <span class="func">get_connection</span>() <span class="keyword">as</span> conn:<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">await</span> conn.<span class="func">execute</span>(<span class="string">"""<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;INSERT INTO TINY_MESSAGES (id, channel, content, status)<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;VALUES (:id, :channel, :content, 'pending')<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;"""</span>, req.<span class="func">dict</span>())
+    </div>
+  </div>
+  <span class="slide-number">9 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 10: SECTION - Multi-Agent ═══════════════ -->
+<div class="slide section-slide" data-title="Multi-Agent Teams">
+  <span class="section-number">III</span>
+  <div class="slide-inner reveal">
+    <h3 class="accent-gold" style="font-size: clamp(0.8rem, 1.5vw, 1rem); text-transform: uppercase; letter-spacing: 0.1em;">Section</h3>
+    <h1>Multi-Agent Teams</h1>
+    <div class="accent-line"></div>
+    <p class="subtitle">Leader agents, @mentions, parallel processing, conversation locking.</p>
+  </div>
+  <span class="slide-number">10 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 11: TEAM ORCHESTRATION ═══════════════ -->
+<div class="slide" data-title="Team Orchestration">
+  <div class="slide-inner reveal">
+    <h2>Team Orchestration</h2>
+    <div class="accent-line"></div>
+    <div style="display: flex; flex-direction: column; gap: clamp(0.3rem, 0.6vw, 0.5rem); max-width: 700px; margin: clamp(0.5rem, 1vw, 1rem) auto 0;">
+      <div class="diagram-box" style="border-color: rgba(139,92,246,0.3);">
+        <span class="accent-violet" style="font-size: clamp(0.7rem, 1.2vw, 0.9rem);">1.</span> User message arrives via channel
+      </div>
+      <div class="diagram-arrow">&#8595;</div>
+      <div class="diagram-box" style="border-color: rgba(244,114,182,0.3);">
+        <span class="accent-rose" style="font-size: clamp(0.7rem, 1.2vw, 0.9rem);">2.</span> Leader agent processes + generates response with @teammate mentions
+      </div>
+      <div class="diagram-arrow">&#8595;</div>
+      <div class="diagram-box" style="border-color: rgba(251,191,36,0.3);">
+        <span class="accent-gold" style="font-size: clamp(0.7rem, 1.2vw, 0.9rem);">3.</span> Mentioned teammates execute in parallel (pending counter tracks completion)
+      </div>
+      <div class="diagram-arrow">&#8595;</div>
+      <div class="diagram-box" style="border-color: rgba(52,211,153,0.3);">
+        <span class="accent-green" style="font-size: clamp(0.7rem, 1.2vw, 0.9rem);">4.</span> Leader assembles final response from teammate outputs
+      </div>
+    </div>
+    <p style="margin-top: clamp(0.5rem, 1vw, 1rem); font-size: clamp(0.65rem, 1.1vw, 0.85rem); color: var(--muted);">Per-conversation locking prevents race conditions when multiple messages arrive for the same thread.</p>
+  </div>
+  <span class="slide-number">11 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 12: SECTION - Channels ═══════════════ -->
+<div class="slide section-slide" data-title="Channels">
+  <span class="section-number">IV</span>
+  <div class="slide-inner reveal">
+    <h3 class="accent-green" style="font-size: clamp(0.8rem, 1.5vw, 1rem); text-transform: uppercase; letter-spacing: 0.1em;">Section</h3>
+    <h1>Channels</h1>
+    <div class="accent-line"></div>
+    <p class="subtitle">Discord, Telegram, WhatsApp. Three ways in.</p>
+  </div>
+  <span class="slide-number">12 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 13: 3 CHANNELS ═══════════════ -->
+<div class="slide" data-title="3 Channels">
+  <div class="slide-inner reveal">
+    <h2>Three Channels</h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3 class="accent-violet">Discord</h3>
+        <p>Webhook-based integration. Bot token + guild ID. Slash commands.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">Telegram</h3>
+        <p>QR code pairing flow. Bot API with long polling. Inline keyboards.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">WhatsApp</h3>
+        <p>whatsapp-web.js library. QR auth. Group + individual chats.</p>
+      </div>
+    </div>
+    <h3 style="margin-top: clamp(0.6rem, 1.5vw, 1.5rem); font-size: clamp(0.85rem, 1.5vw, 1.1rem);">Media Support</h3>
+    <table class="mini-table">
+      <thead>
+        <tr><th>Media Type</th><th>Discord</th><th>Telegram</th><th>WhatsApp</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Photos</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td></tr>
+        <tr><td>Documents</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td></tr>
+        <tr><td>Audio</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td></tr>
+        <tr><td>Voice</td><td style="color: var(--muted);">&#8212;</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td></tr>
+        <tr><td>Video</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td><td class="accent-green">&#10003;</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <span class="slide-number">13 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 14: SECTION - Oracle DB ═══════════════ -->
+<div class="slide section-slide" data-title="Oracle Database">
+  <span class="section-number">V</span>
+  <div class="slide-inner reveal">
+    <h3 class="accent-violet" style="font-size: clamp(0.8rem, 1.5vw, 1rem); text-transform: uppercase; letter-spacing: 0.1em;">Section</h3>
+    <h1>Oracle Database</h1>
+    <div class="accent-line"></div>
+    <p class="subtitle">7 tables. Vector search. ACID. In-database embeddings.</p>
+  </div>
+  <span class="slide-number">14 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 15: 7 TABLES ═══════════════ -->
+<div class="slide" data-title="7 Tables">
+  <div class="slide-inner reveal">
+    <h2>7 Core Tables</h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-4">
+      <div class="card">
+        <h3 class="accent-violet" style="font-size: clamp(0.7rem, 1.2vw, 0.95rem);">TINY_META</h3>
+        <p>Key-value config store</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose" style="font-size: clamp(0.7rem, 1.2vw, 0.95rem);">TINY_MESSAGES</h3>
+        <p>Inbound message queue</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold" style="font-size: clamp(0.7rem, 1.2vw, 0.95rem);">TINY_RESPONSES</h3>
+        <p>Agent output storage</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-green" style="font-size: clamp(0.7rem, 1.2vw, 0.95rem);">TINY_MEMORIES</h3>
+        <p>VECTOR column + index</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-violet" style="font-size: clamp(0.7rem, 1.2vw, 0.95rem);">TINY_SESSIONS</h3>
+        <p>CLOB session state</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose" style="font-size: clamp(0.7rem, 1.2vw, 0.95rem);">TINY_TRANSCRIPTS</h3>
+        <p>Full conversation logs</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold" style="font-size: clamp(0.7rem, 1.2vw, 0.95rem);">TINY_STATE</h3>
+        <p>Agent runtime state</p>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top: clamp(0.5rem, 1vw, 1rem);">
+      <span class="comment">-- Vector index: COSINE similarity, 95% accuracy target</span><br>
+      <span class="keyword">CREATE VECTOR INDEX</span> <span class="type">idx_memories_vec</span> <span class="keyword">ON</span> <span class="type">TINY_MEMORIES</span>(embedding)<br>
+      <span class="keyword">ORGANIZATION</span> <span class="type">NEIGHBOR PARTITIONS</span><br>
+      <span class="keyword">DISTANCE</span> <span class="type">COSINE</span><br>
+      <span class="keyword">WITH TARGET ACCURACY</span> <span class="string">95</span>;
+    </div>
+  </div>
+  <span class="slide-number">15 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 16: VECTOR SEARCH ═══════════════ -->
+<div class="slide" data-title="Vector Search">
+  <div class="slide-inner reveal">
+    <h2>Vector Search</h2>
+    <div class="accent-line"></div>
+    <div class="two-col">
+      <div>
+        <h3>How It Works</h3>
+        <ul>
+          <li><strong class="accent-violet">ONNX model</strong> loaded directly into Oracle (ALL_MINILM_L12_V2)</li>
+          <li><strong class="accent-rose">VECTOR_EMBEDDING()</strong> generates embeddings at INSERT and query time</li>
+          <li><strong class="accent-gold">VECTOR_DISTANCE()</strong> computes COSINE similarity</li>
+          <li>No external embedding API. No network round-trip. No extra cost.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Performance</h3>
+        <div class="stat-row">
+          <div class="stat-item"><div class="stat-value">0</div><div class="stat-label">External API Calls</div></div>
+          <div class="stat-item"><div class="stat-value">95%</div><div class="stat-label">Target Accuracy</div></div>
+        </div>
+        <p style="font-size: clamp(0.65rem, 1.1vw, 0.85rem); color: var(--muted);">Embedding generation and similarity search happen in the same transaction. The data never leaves the database.</p>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top: clamp(0.5rem, 1vw, 1rem);">
+      <span class="comment">-- Remember + Recall in pure SQL</span><br>
+      <span class="keyword">INSERT INTO</span> <span class="type">TINY_MEMORIES</span> (id, content, embedding)<br>
+      <span class="keyword">VALUES</span> (:id, :content, <span class="func">VECTOR_EMBEDDING</span>(<span class="type">ALL_MINILM_L12_V2</span> <span class="keyword">USING</span> :content));<br><br>
+      <span class="keyword">SELECT</span> content, <span class="func">VECTOR_DISTANCE</span>(embedding, <span class="func">VECTOR_EMBEDDING</span>(<br>
+      &nbsp;&nbsp;<span class="type">ALL_MINILM_L12_V2</span> <span class="keyword">USING</span> :query), <span class="type">COSINE</span>) <span class="keyword">AS</span> score<br>
+      <span class="keyword">FROM</span> <span class="type">TINY_MEMORIES</span> <span class="keyword">ORDER BY</span> score <span class="keyword">FETCH FIRST</span> <span class="string">5</span> <span class="keyword">ROWS ONLY</span>;
+    </div>
+  </div>
+  <span class="slide-number">16 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 17: SECTION - Dashboard ═══════════════ -->
+<div class="slide section-slide" data-title="TinyOffice Dashboard">
+  <span class="section-number">VI</span>
+  <div class="slide-inner reveal">
+    <h3 class="accent-rose" style="font-size: clamp(0.8rem, 1.5vw, 1rem); text-transform: uppercase; letter-spacing: 0.1em;">Section</h3>
+    <h1>TinyOffice Dashboard</h1>
+    <div class="accent-line"></div>
+    <p class="subtitle">Next.js 16, React 19, Tailwind 4, shadcn/ui.</p>
+  </div>
+  <span class="slide-number">17 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 18: WEB DASHBOARD ═══════════════ -->
+<div class="slide" data-title="Web Dashboard">
+  <div class="slide-inner reveal">
+    <h2>Web Dashboard</h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3 class="accent-violet">Dashboard</h3>
+        <p>Live SSE feed. Agent status, queue depth, recent messages.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">Agents CRUD</h3>
+        <p>Create, edit, delete agents. Model picker, system prompt editor, tool toggles.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">Teams</h3>
+        <p>Compose multi-agent teams. Set leader, add teammates, define routing.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-green">Chat</h3>
+        <p>Direct conversation with any agent. Session history. Markdown rendering.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-violet">Tasks (Kanban)</h3>
+        <p>Drag-and-drop task board. Assign to agents. Track completion.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">Console</h3>
+        <p>Raw API console. Send arbitrary requests. Inspect responses.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">Logs</h3>
+        <p>Real-time log stream. Filter by level, agent, channel.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-green">Settings</h3>
+        <p>LLM provider config, channel credentials, system preferences.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-violet">Office View</h3>
+        <p>Visual agent workspace. See who's active, what they're working on.</p>
+      </div>
+    </div>
+  </div>
+  <span class="slide-number">18 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 19: SECTION - LLM & Deploy ═══════════════ -->
+<div class="slide section-slide" data-title="LLM & Deployment">
+  <span class="section-number">VII</span>
+  <div class="slide-inner reveal">
+    <h3 class="accent-gold" style="font-size: clamp(0.8rem, 1.5vw, 1rem); text-transform: uppercase; letter-spacing: 0.1em;">Section</h3>
+    <h1>LLM &amp; Deployment</h1>
+    <div class="accent-line"></div>
+    <p class="subtitle">Four LLM providers. Three deployment paths.</p>
+  </div>
+  <span class="slide-number">19 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 20: LLM PROVIDERS ═══════════════ -->
+<div class="slide" data-title="LLM Providers">
+  <div class="slide-inner reveal">
+    <h2>LLM Providers</h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-4">
+      <div class="card">
+        <h3 class="accent-violet">Anthropic</h3>
+        <p>Claude models. Tool use, vision, long context.</p>
+        <span class="badge badge-violet" style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">Claude</span>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">OpenAI</h3>
+        <p>GPT-5 family. Function calling, structured output.</p>
+        <span class="badge badge-rose" style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">GPT-5</span>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">OpenCode</h3>
+        <p>Multi-model proxy. Route to any backend through a single API.</p>
+        <span class="badge badge-gold" style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">Multi-Model</span>
+      </div>
+      <div class="card">
+        <h3 class="accent-green">OCI GenAI</h3>
+        <p>Oracle Cloud. Llama, Cohere. On-premises option.</p>
+        <span class="badge badge-green" style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">Llama / Cohere</span>
+      </div>
+    </div>
+    <div class="code-block" style="margin-top: clamp(0.5rem, 1vw, 1rem);">
+      <span class="comment"># Switch providers at runtime</span><br>
+      <span class="type">LLM_PROVIDER</span>=<span class="string">"anthropic"</span>&nbsp;&nbsp;&nbsp;<span class="comment"># or "openai", "opencode", "oci"</span><br>
+      <span class="type">LLM_MODEL</span>=<span class="string">"claude-sonnet-4-20250514"</span><br>
+      <span class="type">LLM_API_KEY</span>=<span class="string">"sk-..."</span>
+    </div>
+  </div>
+  <span class="slide-number">20 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 21: DEPLOYMENT ═══════════════ -->
+<div class="slide" data-title="Deployment">
+  <div class="slide-inner reveal">
+    <h2>Deployment</h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3 class="accent-violet">One-Command Install</h3>
+        <div class="code-block">
+          <span class="func">curl</span> -sSL <span class="string">https://get.tinyoraclaw.dev</span> | <span class="func">bash</span>
+        </div>
+        <p style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">Downloads binaries, sets up .env, starts services.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose">Docker Compose</h3>
+        <div class="code-block">
+          <span class="func">docker compose</span> up -d<br>
+          <span class="comment"># FreePDB + sidecar + Node</span>
+        </div>
+        <p style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">Oracle Free 23ai + Python sidecar + Node.js. All pre-configured.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold">OCI One-Click</h3>
+        <div class="code-block">
+          <span class="comment"># ResourceManager stack</span><br>
+          <span class="type">Deploy to Oracle Cloud</span>
+        </div>
+        <p style="margin-top: clamp(0.2rem, 0.5vw, 0.4rem);">Terraform stack. Autonomous DB + Compute. Production-ready.</p>
+      </div>
+    </div>
+    <h3 style="margin-top: clamp(0.6rem, 1.5vw, 1.2rem); font-size: clamp(0.8rem, 1.4vw, 1rem);">Key Environment Variables</h3>
+    <div class="code-block">
+      <span class="type">ORACLE_DSN</span>=<span class="string">"host:1521/FREEPDB1"</span>&nbsp;&nbsp;<span class="type">ORACLE_USER</span>=<span class="string">"tiny"</span>&nbsp;&nbsp;<span class="type">ORACLE_PASSWORD</span>=<span class="string">"***"</span><br>
+      <span class="type">SIDECAR_URL</span>=<span class="string">"http://localhost:8100"</span>&nbsp;&nbsp;<span class="type">HONO_PORT</span>=<span class="string">"3777"</span>
+    </div>
+  </div>
+  <span class="slide-number">21 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 22: DESIGN PATTERNS ═══════════════ -->
+<div class="slide" data-title="Design Patterns">
+  <div class="slide-inner reveal">
+    <h2>Design Patterns</h2>
+    <div class="accent-line"></div>
+    <div class="card-grid cols-3">
+      <div class="card">
+        <h3 class="accent-violet" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">Async HTTP Bridge</h3>
+        <p>TS calls Python over HTTP. Clean process boundary. Independent scaling.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">SKIP LOCKED Queue</h3>
+        <p>SELECT FOR UPDATE SKIP LOCKED. No message double-processing. Atomic claim.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-gold" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">Session CLOB</h3>
+        <p>Full session state serialized to CLOB. Restore on reconnect. No data loss.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-green" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">Audit Trail</h3>
+        <p>Sequence-numbered responses. Every agent action tracked. Full replay possible.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-violet" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">SSE Real-Time</h3>
+        <p>Server-Sent Events from Hono to dashboard. Live updates without polling.</p>
+      </div>
+      <div class="card">
+        <h3 class="accent-rose" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">File Exchange Tags</h3>
+        <p>Structured tags for cross-process file references. Clean media handoff.</p>
+      </div>
+    </div>
+  </div>
+  <span class="slide-number">22 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 23: TECH STACK ═══════════════ -->
+<div class="slide" data-title="Tech Stack">
+  <div class="slide-inner reveal">
+    <h2>Tech Stack</h2>
+    <div class="accent-line"></div>
+    <div class="two-col">
+      <div>
+        <h3>TypeScript / Frontend</h3>
+        <table class="mini-table">
+          <tbody>
+            <tr><td class="accent-violet">Node.js</td><td>22 LTS</td></tr>
+            <tr><td class="accent-violet">React</td><td>19</td></tr>
+            <tr><td class="accent-violet">Next.js</td><td>16</td></tr>
+            <tr><td class="accent-violet">Tailwind CSS</td><td>4</td></tr>
+            <tr><td class="accent-violet">Hono</td><td>REST + SSE</td></tr>
+            <tr><td class="accent-violet">shadcn/ui</td><td>Components</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h3>Python / Backend</h3>
+        <table class="mini-table">
+          <tbody>
+            <tr><td class="accent-rose">FastAPI</td><td>Async API</td></tr>
+            <tr><td class="accent-rose">oracledb</td><td>Oracle driver</td></tr>
+            <tr><td class="accent-rose">Pydantic</td><td>Validation</td></tr>
+            <tr><td class="accent-rose">ONNX Runtime</td><td>Embeddings</td></tr>
+            <tr><td class="accent-rose">uvicorn</td><td>ASGI server</td></tr>
+            <tr><td class="accent-rose">python-oracledb</td><td>Thick mode</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="stat-row" style="margin-top: clamp(0.5rem, 1.5vw, 1.5rem);">
+      <div class="stat-item"><div class="stat-value">4,924</div><div class="stat-label">Lines of Code</div></div>
+      <div class="stat-item"><div class="stat-value">2</div><div class="stat-label">Languages</div></div>
+      <div class="stat-item"><div class="stat-value">12+</div><div class="stat-label">Key Dependencies</div></div>
+    </div>
+  </div>
+  <span class="slide-number">23 / 24</span>
+</div>
+
+<!-- ═══════════════ SLIDE 24: CLOSING ═══════════════ -->
+<div class="slide" data-title="Get Started">
+  <div class="slide-inner reveal">
+    <h1>Get Started</h1>
+    <div class="accent-line"></div>
+    <div class="code-block" style="max-width: 600px; margin: 0 auto clamp(0.5rem, 1.5vw, 1.5rem);">
+      <span class="func">git clone</span> <span class="string">https://github.com/jasperan/tinyoraclaw</span><br>
+      <span class="func">cp</span> .env.example .env<br>
+      <span class="func">docker compose</span> up -d<br>
+      <span class="comment"># Open http://localhost:3777</span>
+    </div>
+    <h3 style="margin-top: clamp(0.8rem, 2vw, 2rem);">The OraClaw Family</h3>
+    <div class="card-grid cols-4" style="margin-top: clamp(0.4rem, 1vw, 0.8rem);">
+      <div class="card" style="text-align: center;">
+        <h3 class="accent-violet" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">IronOraClaw</h3>
+        <p>Rust. Full security layer. Self-expanding tools.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <h3 class="accent-rose" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">PicoOraClaw</h3>
+        <p>Go. Minimal footprint. Fast startup.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <h3 class="accent-gold" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">ZeroOraClaw</h3>
+        <p>Zero config. Convention over configuration.</p>
+      </div>
+      <div class="card" style="text-align: center;">
+        <h3 class="accent-green" style="font-size: clamp(0.75rem, 1.3vw, 1rem);">OracLaw</h3>
+        <p>TypeScript. Full-featured. Enterprise.</p>
+      </div>
+    </div>
+    <p style="margin-top: clamp(0.8rem, 2vw, 1.5rem); color: var(--muted); font-size: clamp(0.65rem, 1.1vw, 0.85rem);">
+      <span class="badge badge-violet">v0.1.0</span>&nbsp;
+      <span class="badge badge-rose">MIT / Apache-2.0</span>&nbsp;
+      <span class="badge badge-gold">TypeScript + Python</span>
+    </p>
+  </div>
+  <span class="slide-number">24 / 24</span>
+</div>
+
+<script>
+class SlidePresentation {
+  constructor() {
+    this.slides = document.querySelectorAll('.slide');
+    this.totalSlides = this.slides.length;
+    this.currentIndex = 0;
+    this.isAnimating = false;
+    this.touchStartY = 0;
+    this.touchStartX = 0;
+
+    this.initNavDots();
+    this.initIntersectionObserver();
+    this.initKeyboardNav();
+    this.initTouchNav();
+    this.initWheelNav();
+    this.updateProgress();
+  }
+
+  initNavDots() {
+    const container = document.getElementById('nav-dots');
+    this.slides.forEach((slide, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'nav-dot';
+      dot.title = slide.dataset.title || `Slide ${i + 1}`;
+      dot.setAttribute('aria-label', dot.title);
+      dot.addEventListener('click', () => this.goToSlide(i));
+      container.appendChild(dot);
+    });
+    this.dots = container.querySelectorAll('.nav-dot');
+  }
+
+  initIntersectionObserver() {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const index = Array.from(this.slides).indexOf(entry.target);
+          this.currentIndex = index;
+          this.updateProgress();
+          this.updateDots();
+
+          const reveals = entry.target.querySelectorAll('.reveal');
+          reveals.forEach((el, i) => {
+            setTimeout(() => el.classList.add('visible'), i * 100);
+          });
+        } else {
+          const reveals = entry.target.querySelectorAll('.reveal');
+          reveals.forEach(el => el.classList.remove('visible'));
+        }
+      });
+    }, { threshold: 0.5 });
+
+    this.slides.forEach(slide => observer.observe(slide));
+  }
+
+  initKeyboardNav() {
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        this.next();
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        e.preventDefault();
+        this.prev();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        this.goToSlide(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        this.goToSlide(this.totalSlides - 1);
+      }
+    });
+  }
+
+  initTouchNav() {
+    document.addEventListener('touchstart', (e) => {
+      this.touchStartY = e.touches[0].clientY;
+      this.touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    document.addEventListener('touchend', (e) => {
+      const dy = this.touchStartY - e.changedTouches[0].clientY;
+      const dx = this.touchStartX - e.changedTouches[0].clientX;
+      if (Math.abs(dy) < 50 && Math.abs(dx) < 50) return;
+
+      if (Math.abs(dy) > Math.abs(dx)) {
+        if (dy > 0) this.next();
+        else this.prev();
+      }
+    }, { passive: true });
+  }
+
+  initWheelNav() {
+    let wheelTimeout;
+    document.addEventListener('wheel', (e) => {
+      if (this.isAnimating) return;
+      clearTimeout(wheelTimeout);
+      wheelTimeout = setTimeout(() => {
+        if (Math.abs(e.deltaY) > 30) {
+          if (e.deltaY > 0) this.next();
+          else this.prev();
+        }
+      }, 50);
+    }, { passive: true });
+  }
+
+  goToSlide(index) {
+    if (index < 0 || index >= this.totalSlides || this.isAnimating) return;
+    this.isAnimating = true;
+    this.currentIndex = index;
+    this.slides[index].scrollIntoView({ behavior: 'smooth' });
+    this.updateProgress();
+    this.updateDots();
+    setTimeout(() => { this.isAnimating = false; }, 600);
+  }
+
+  next() { this.goToSlide(this.currentIndex + 1); }
+  prev() { this.goToSlide(this.currentIndex - 1); }
+
+  updateProgress() {
+    const pct = ((this.currentIndex) / (this.totalSlides - 1)) * 100;
+    document.getElementById('progress-bar').style.width = pct + '%';
+  }
+
+  updateDots() {
+    if (!this.dots) return;
+    this.dots.forEach((dot, i) => {
+      dot.classList.toggle('active', i === this.currentIndex);
+    });
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => new SlidePresentation());
+</script>
+
+</body>
+</html>
