@@ -35,6 +35,25 @@
 
 TinyClaw is a multi-agent, multi-team, multi-channel 24/7 AI assistant framework. TinyOraClaw preserves all of its capabilities while adding enterprise-grade persistence and vector search.
 
+## Architecture at a Glance
+
+> **Full interactive presentation**: Open [`tinyoraclaw-presentation.html`](tinyoraclaw-presentation.html) in your browser for all 24 slides with animations and keyboard navigation.
+
+<table>
+<tr>
+<td align="center"><strong>Title</strong><br><img src="docs/slides/01-title.jpg" alt="TinyOraClaw Title" width="400"/></td>
+<td align="center"><strong>Architecture</strong><br><img src="docs/slides/04-architecture.jpg" alt="Architecture" width="400"/></td>
+</tr>
+<tr>
+<td align="center"><strong>Team Orchestration</strong><br><img src="docs/slides/11-teams.jpg" alt="Teams" width="400"/></td>
+<td align="center"><strong>7 Oracle Tables</strong><br><img src="docs/slides/15-tables.jpg" alt="Oracle Tables" width="400"/></td>
+</tr>
+<tr>
+<td align="center"><strong>Web Dashboard</strong><br><img src="docs/slides/18-dashboard.jpg" alt="Dashboard" width="400"/></td>
+<td align="center"><strong>Tech Stack</strong><br><img src="docs/slides/23-stack.jpg" alt="Tech Stack" width="400"/></td>
+</tr>
+</table>
+
 ### Why Oracle AI Database?
 
 | Feature | SQLite (upstream) | Oracle AI Database (TinyOraClaw) |
@@ -212,7 +231,7 @@ ORACLE_HOST=localhost
 ORACLE_PORT=1521
 ORACLE_SERVICE=FREEPDB1
 ORACLE_USER=tinyoraclaw
-ORACLE_PASSWORD=TinyOraClaw2026
+ORACLE_PASSWORD=TinyOraClaw2026  # pragma: allowlist secret
 ```
 
 ### ADB (Oracle Cloud)
@@ -220,7 +239,7 @@ ORACLE_PASSWORD=TinyOraClaw2026
 ```bash
 ORACLE_MODE=adb
 ORACLE_USER=ADMIN
-ORACLE_PASSWORD=Welcome12345*
+ORACLE_PASSWORD=Welcome12345*  # pragma: allowlist secret
 ORACLE_DSN=(description= (retry_count=20)(retry_delay=3)...)
 ```
 
