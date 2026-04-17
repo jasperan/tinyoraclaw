@@ -38,7 +38,7 @@ async function fetchQueueStatus(): Promise<{ pending: number; dead: number }> {
         if (SIDECAR_TOKEN) headers['Authorization'] = `Bearer ${SIDECAR_TOKEN}`;
         const res = await fetch(`${SIDECAR_URL}/api/queue/status`, { headers });
         if (!res.ok) return { pending: 0, dead: 0 };
-        const data = await res.json() as any;
+        const data = await res.json() as { pending?: number; dead?: number };
         return { pending: data.pending ?? 0, dead: data.dead ?? 0 };
     } catch {
         return { pending: 0, dead: 0 };
@@ -47,6 +47,10 @@ async function fetchQueueStatus(): Promise<{ pending: number; dead: number }> {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+// TeamConfig and AgentConfig are re-declared locally because the visualizer
+// is built with its own tsconfig (tsconfig.visualizer.json) that targets ESM,
+// while src/lib/types.ts is compiled as CommonJS for the main process.
+// Keeping them in sync is enforced via shape — fields here are a strict subset.
 interface TeamConfig {
     name: string;
     agents: string[];

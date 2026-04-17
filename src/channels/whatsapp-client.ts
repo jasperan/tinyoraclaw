@@ -10,6 +10,7 @@ import qrcode from 'qrcode-terminal';
 import fs from 'fs';
 import path from 'path';
 import { ensureSenderPaired } from '../lib/pairing';
+import { AgentConfig, TeamConfig } from '../lib/types';
 
 const API_PORT = parseInt(process.env.TINYCLAW_API_PORT || '3777', 10);
 const API_BASE = `http://localhost:${API_PORT}`;
@@ -108,7 +109,7 @@ function getTeamListText(): string {
             return 'No teams configured.\n\nCreate a team with: tinyclaw team add';
         }
         let text = '*Available Teams:*\n';
-        for (const [id, team] of Object.entries(teams) as [string, any][]) {
+        for (const [id, team] of Object.entries(teams) as [string, TeamConfig][]) {
             text += `\n@${id} - ${team.name}`;
             text += `\n  Agents: ${team.agents.join(', ')}`;
             text += `\n  Leader: @${team.leader_agent}`;
@@ -130,7 +131,7 @@ function getAgentListText(): string {
             return 'No agents configured. Using default single-agent mode.\n\nConfigure agents in .tinyclaw/settings.json or run: tinyclaw agent add';
         }
         let text = '*Available Agents:*\n';
-        for (const [id, agent] of Object.entries(agents) as [string, any][]) {
+        for (const [id, agent] of Object.entries(agents) as [string, AgentConfig][]) {
             text += `\n@${id} - ${agent.name}`;
             text += `\n  Provider: ${agent.provider}/${agent.model}`;
             text += `\n  Directory: ${agent.working_directory}`;
@@ -377,7 +378,14 @@ async function checkOutgoingQueue(): Promise<void> {
     try {
         const res = await fetch(`${API_BASE}/api/responses/pending?channel=whatsapp`);
         if (!res.ok) return;
-        const responses = await res.json() as any[];
+        const responses = await res.json() as Array<{
+            id: number;
+            messageId: string;
+            message: string;
+            sender: string;
+            senderId?: string;
+            files?: string[];
+        }>;
 
         for (const resp of responses) {
             try {

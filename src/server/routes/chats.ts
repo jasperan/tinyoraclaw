@@ -11,6 +11,15 @@ function sidecarHeaders(): Record<string, string> {
     return headers;
 }
 
+interface SidecarSession {
+    team_id?: string;
+    teamId?: string;
+    session_key?: string;
+    label?: string;
+    created_at?: number | string;
+    channel?: string;
+}
+
 const app = new Hono();
 
 // GET /api/chats — list all sessions from Oracle (replaces filesystem scan)
@@ -24,11 +33,11 @@ app.get('/api/chats', async (c) => {
             return c.json([]);
         }
 
-        const data = await res.json() as { sessions?: any[] };
+        const data = await res.json() as { sessions?: SidecarSession[] };
         const sessions = data.sessions || [];
 
         // Map to the format TinyOffice expects
-        return c.json(sessions.map((s: any) => ({
+        return c.json(sessions.map((s) => ({
             teamId: s.team_id || s.teamId || 'unknown',
             file: s.session_key || s.label || 'session',
             time: s.created_at ? new Date(s.created_at).getTime() : Date.now(),
@@ -53,7 +62,7 @@ app.get('/api/chats/:teamId', async (c) => {
             return c.json([]);
         }
 
-        const data = await res.json() as { sessions?: any[] };
+        const data = await res.json() as { sessions?: SidecarSession[] };
         return c.json(data.sessions || []);
     } catch {
         return c.json([]);
