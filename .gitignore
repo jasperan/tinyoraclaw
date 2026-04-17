@@ -77,6 +77,8 @@ docs/*.md
 .agents/
 .crush/
 .openhands/
+.serena/
+content/
 
 # Auto-added by install-pre-commit-hooks.sh
 task_plan.md

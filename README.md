@@ -68,16 +68,16 @@ TinyClaw is a multi-agent, multi-team, multi-channel 24/7 AI assistant framework
 ### Key Features
 
 Everything from TinyClaw:
-- **Multi-agent** — Run multiple isolated AI agents with specialized roles
-- **Multi-team collaboration** — Agents hand off work via chain execution and fan-out
-- **Multi-channel** — Discord, WhatsApp, and Telegram
-- **Web portal (TinyOffice)** — Browser-based dashboard for chat, agents, teams, tasks, logs
-- **Team Observation** — Observe agent team conversations in real-time
+- **Multi-agent**: Run multiple isolated AI agents with specialized roles
+- **Multi-team collaboration**: Agents hand off work via chain execution and fan-out
+- **Multi-channel**: Discord, WhatsApp, and Telegram
+- **Web portal (TinyOffice)**: Browser-based dashboard for chat, agents, teams, tasks, logs
+- **Team Observation**: Observe agent team conversations in real-time
 
 Plus Oracle AI Database:
 - **Oracle AI Database** as exclusive storage backend (not SQLite, not files)
-- **In-database ONNX embeddings** (ALL_MINILM_L12_V2) — zero external API calls
-- **Semantic memory recall** — agents remember by meaning, not just keywords
+- **In-database ONNX embeddings** (ALL_MINILM_L12_V2): zero external API calls
+- **Semantic memory recall**: agents remember by meaning, not just keywords
 - **Python FastAPI sidecar** for all Oracle operations
 - **Docker Compose** with FreePDB (local) + ADB (cloud) modes
 - **Full audit transcripts** with agent attribution
@@ -131,7 +131,7 @@ Upstream TinyClaw connects to the sidecar via HTTP/REST, replacing all SQLite ca
 ## Quick Start
 
 <!-- one-command-install -->
-> **One-command install** — clone, configure, and run in a single step:
+> **One-command install**: clone, configure, and run in a single step.
 >
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/jasperan/tinyoraclaw/main/install.sh | bash
@@ -187,7 +187,7 @@ npm run build
 ./tinyclaw.sh start
 ```
 
-**TinyOffice** launches automatically at [http://localhost:3000](http://localhost:3000) — open it in your browser to watch agents communicate in real time, manage teams, chat via the web console, and monitor the message queue.
+**TinyOffice** launches automatically at [http://localhost:3000](http://localhost:3000). Open it in your browser to watch agents communicate in real time, manage teams, chat via the web console, and monitor the message queue.
 
 To run just the queue processor standalone:
 ```bash
@@ -264,7 +264,7 @@ The Python FastAPI sidecar exposes these endpoints on port 8100:
 
 ## Deploy to Oracle Cloud (One-Click)
 
-Deploy a fully configured TinyOraClaw instance on OCI with Oracle AI Database — all automated.
+Deploy a fully configured TinyOraClaw instance on OCI with Oracle AI Database, all automated.
 
 [![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https://github.com/jasperan/tinyoraclaw/raw/main/deploy/oci/orm/tinyoraclaw-orm.zip)
 
@@ -308,13 +308,13 @@ cd tinyoffice && npm run dev
 
 ## OCI Generative AI (Optional)
 
-TinyOraClaw can optionally use **OCI Generative AI** as an LLM backend via the `oci-openai` Python library. This is **not required** — the default LLM provider (Anthropic/OpenAI via API keys) works out of the box.
+TinyOraClaw can optionally use **OCI Generative AI** as an LLM backend via the `oci-openai` Python library. This is **not required** (the default LLM provider via Anthropic/OpenAI API keys works out of the box).
 
 ### Why OCI GenAI?
 
-- **Enterprise models** — Access xAI Grok, Meta Llama, Cohere, and other models through OCI
-- **OCI-native auth** — Uses your existing `~/.oci/config` profile (no separate API keys)
-- **Same region as your database** — Run inference and storage in the same OCI region
+- **Enterprise models**: Access xAI Grok, Meta Llama, Cohere, and other models through OCI
+- **OCI-native auth**: Uses your existing `~/.oci/config` profile (no separate API keys)
+- **Same region as your database**: Run inference and storage in the same OCI region
 
 ### Setup
 
@@ -364,7 +364,7 @@ See [`oci-genai/README.md`](oci-genai/README.md) for full documentation.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License, see [LICENSE](LICENSE) for details.
 
 Based on [TinyClaw](https://github.com/TinyAGI/tinyclaw) by Jian Liao.
 
